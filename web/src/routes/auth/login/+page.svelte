@@ -7,7 +7,7 @@
   import { Route } from '$lib/route';
   import { oauth } from '$lib/utils';
   import { getServerErrorMessage, handleError } from '$lib/utils/handle-error';
-  import { login, type LoginResponseDto } from '@immich/sdk';
+  import { defaults, login, type LoginResponseDto } from '@immich/sdk';
   import { Alert, Button, Field, Input, PasswordInput, Stack } from '@immich/ui';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -22,6 +22,8 @@
   let errorMessage: string = $state('');
   let email = $state('');
   let password = $state('');
+  let serverAddress = $state(globalThis.localStorage?.getItem('lomo_server_address') || 'localhost');
+  let serverPort = $state(globalThis.localStorage?.getItem('lomo_server_port') || '8000');
   let oauthError = $state('');
   let loading = $state(false);
   let oauthLoading = $state(true);
@@ -81,7 +83,16 @@
     try {
       errorMessage = '';
       loading = true;
+
+      // Set custom header so proxy knows which lomo-backend to use
+      const lomoServerUrl = `http://${serverAddress}:${serverPort}`;
+      defaults.headers = { ...defaults.headers, 'X-Lomo-Server': lomoServerUrl };
+
       const user = await login({ loginCredentialDto: { email, password } });
+
+      // Save server address on successful login
+      globalThis.localStorage?.setItem('lomo_server_address', serverAddress);
+      globalThis.localStorage?.setItem('lomo_server_port', serverPort);
 
       if (user.isAdmin && !serverConfig.isOnboarded) {
         await onOnboarding();
@@ -141,8 +152,21 @@
           <Alert color="danger" title={errorMessage} closable />
         {/if}
 
-        <Field label={$t('email')}>
-          <Input id="email" name="email" type="email" autocomplete="email" bind:value={email} />
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <Field label="Server Address">
+              <Input id="serverAddress" name="serverAddress" type="text" placeholder="192.168.1.73" bind:value={serverAddress} />
+            </Field>
+          </div>
+          <div class="w-28">
+            <Field label="Port">
+              <Input id="serverPort" name="serverPort" type="text" placeholder="8000" bind:value={serverPort} />
+            </Field>
+          </div>
+        </div>
+
+        <Field label={$t('username')}>
+          <Input id="email" name="email" type="text" autocomplete="username" bind:value={email} />
         </Field>
 
         <Field label={$t('password')}>

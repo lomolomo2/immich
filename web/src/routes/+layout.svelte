@@ -108,13 +108,14 @@
 
   const { serverRestarting } = websocketStore;
 
-  $effect.pre(() => {
-    if ($user || $serverRestarting || page.url.pathname.startsWith(Route.maintenanceMode())) {
-      openWebsocketConnection();
-    } else {
-      closeWebsocketConnection();
-    }
-  });
+  // Disabled for lomo-backend proxy (no WebSocket support)
+  // $effect.pre(() => {
+  //   if ($user || $serverRestarting || page.url.pathname.startsWith(Route.maintenanceMode())) {
+  //     openWebsocketConnection();
+  //   } else {
+  //     closeWebsocketConnection();
+  //   }
+  // });
 
   serverRestarting.subscribe((isRestarting) => {
     if (!isRestarting) {

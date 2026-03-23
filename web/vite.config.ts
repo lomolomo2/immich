@@ -7,11 +7,11 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, type ProxyOptions, type UserConfig } from 'vite';
 
 const upstream = {
-  target: process.env.IMMICH_SERVER_URL || 'http://immich-server:2283/',
-  secure: true,
+  target: process.env.IMMICH_SERVER_URL || 'http://localhost:3001/',
+  secure: false,
   changeOrigin: true,
   logLevel: 'info',
-  ws: true,
+  ws: false,
 };
 
 const proxy: Record<string, string | ProxyOptions> = {

@@ -139,7 +139,7 @@
   };
 
   const refreshAlbum = async () => {
-    album = await getAlbumInfo({ id: album.id, withoutAssets: true });
+    album = await getAlbumInfo({ id: album?.id, withoutAssets: true });
   };
 
   const setModeToView = async () => {
@@ -194,7 +194,7 @@
   const updateThumbnail = async (assetId: string) => {
     try {
       const response = await updateAlbumInfo({
-        id: album.id,
+        id: album?.id,
         updateAlbumDto: {
           albumThumbnailAssetId: assetId,
         },
@@ -207,21 +207,27 @@
   };
 
   onNavigate(async ({ to }) => {
-    if (!isAlbumsRoute(to?.route.id) && album.assetCount === 0 && !album.albumName) {
+    if (album && !isAlbumsRoute(to?.route.id) && album.assetCount === 0 && !album.albumName) {
       await handleDeleteAlbum(album, { notify: false, prompt: false });
     }
   });
 
-  let album = $derived(data.album);
-  let albumId = $derived(album.id);
+  let _lastAlbum = $state(data.album);
+  $effect(() => {
+    if (data.album) {
+      _lastAlbum = data.album;
+    }
+  });
+  let album = $derived(data.album ?? _lastAlbum);
+  let albumId = $derived(album?.id);
 
-  const containsEditors = $derived(album?.shared && album.albumUsers.some(({ role }) => role === AlbumUserRole.Editor));
+  const containsEditors = $derived(album?.shared && album?.albumUsers?.some(({ role }) => role === AlbumUserRole.Editor));
   const albumUsers = $derived(
-    showAlbumUsers && containsEditors ? [album.owner, ...album.albumUsers.map(({ user }) => user)] : [],
+    showAlbumUsers && containsEditors && album ? [album.owner, ...album.albumUsers.map(({ user }) => user)] : [],
   );
 
   $effect(() => {
-    if (!album.isActivityEnabled && activityManager.commentCount === 0) {
+    if (!album?.isActivityEnabled && activityManager.commentCount === 0) {
       assetViewerManager.closeActivityPanel();
     }
   });
@@ -234,32 +240,32 @@
         timelineAlbumId: albumId,
       };
     }
-    return { albumId, order: album.order };
+    return { albumId, order: album?.order };
   });
 
-  const isShared = $derived(viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : album.albumUsers.length > 0);
+  const isShared = $derived(viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : (album?.albumUsers?.length ?? 0) > 0);
 
   $effect(() => {
     if ($showAssetViewer || !isShared) {
       return;
     }
 
-    handlePromiseError(activityManager.init(album.id));
+    handlePromiseError(activityManager.init(album?.id));
   });
 
   onDestroy(() => activityManager.reset());
 
-  let isOwned = $derived($user.id == album.ownerId);
+  let isOwned = $derived($user.id == album?.ownerId);
 
   let showActivityStatus = $derived(
-    album.albumUsers.length > 0 && !$showAssetViewer && (album.isActivityEnabled || activityManager.commentCount > 0),
+    (album?.albumUsers?.length ?? 0) > 0 && !$showAssetViewer && (album?.isActivityEnabled || activityManager.commentCount > 0),
   );
   let isEditor = $derived(
-    album.albumUsers.find(({ user: { id } }) => id === $user.id)?.role === AlbumUserRole.Editor ||
-      album.ownerId === $user.id,
+    album?.albumUsers?.find(({ user: { id } }) => id === $user.id)?.role === AlbumUserRole.Editor ||
+      album?.ownerId === $user.id,
   );
 
-  let albumHasViewers = $derived(album.albumUsers.some(({ role }) => role === AlbumUserRole.Viewer));
+  let albumHasViewers = $derived(album?.albumUsers?.some(({ role }) => role === AlbumUserRole.Viewer) ?? false);
   const isSelectionMode = $derived(
     viewMode === AlbumPageViewMode.SELECT_ASSETS ? true : viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
   );
@@ -281,7 +287,7 @@
   };
 
   const onAlbumDelete = async ({ id }: AlbumResponseDto) => {
-    if (id === album.id) {
+    if (id === album?.id) {
       await goto(Route.albums());
       viewMode = AlbumPageViewMode.VIEW;
     }
@@ -299,19 +305,21 @@
   };
 
   const onAlbumUserUpdate = ({ albumId, userId, role }: { albumId: string; userId: string; role: AlbumUserRole }) => {
-    if (albumId !== album.id) {
+    if (albumId !== album?.id) {
       return;
     }
 
-    const albumUsers = album.albumUsers.map((albumUser) =>
+    const albumUsers = album?.albumUsers?.map((albumUser) =>
       albumUser.user.id === userId ? { ...albumUser, role } : albumUser,
-    );
-    album = { ...album, albumUsers };
+    ) ?? [];
+    if (album) {
+      album = { ...album, albumUsers };
+    }
   };
 
   const { Cast } = $derived(getGlobalActions($t));
-  const { Share } = $derived(getAlbumActions($t, album));
-  const { AddAssets, Upload } = $derived(getAlbumAssetsActions($t, album, timelineInteraction.selectedAssets));
+  const { Share } = $derived(album ? getAlbumActions($t, album) : { Share: undefined });
+  const { AddAssets, Upload } = $derived(album ? getAlbumAssetsActions($t, album, timelineInteraction.selectedAssets) : { AddAssets: undefined, Upload: undefined });
 
   const Close = $derived({
     title: $t('go_back'),
@@ -323,6 +331,7 @@
   });
 </script>
 
+{#if album}
 <OnEvents
   {onSharedLinkCreate}
   onSharedLinkDelete={refreshAlbum}
@@ -635,6 +644,7 @@
     </div>
   {/if}
 </div>
+{/if}
 
 <style>
   ::placeholder {
