@@ -146,6 +146,12 @@
       </Alert>
     {/if}
 
+    <div class="rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 text-sm text-blue-800 dark:text-blue-200">
+      <p class="font-semibold mb-1">Default Credentials</p>
+      <p>Username: <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">admin</code></p>
+      <p>Password: <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">password</code></p>
+    </div>
+
     {#if !oauthLoading && featureFlagsManager.value.passwordLogin}
       <form {onsubmit} class="flex flex-col gap-4">
         {#if errorMessage}
