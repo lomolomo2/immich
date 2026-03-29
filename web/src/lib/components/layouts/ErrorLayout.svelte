@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LomorageLogo from '$lib/components/branding/LomorageLogo.svelte';
   import { copyToClipboard } from '$lib/utils';
   import {
     Card,
@@ -9,7 +10,6 @@
     Icon,
     IconButton,
     Link,
-    Logo,
     Text,
     VStack,
   } from '@immich/ui';
@@ -35,7 +35,7 @@
   <section>
     <div class="flex place-items-center border-b px-6 py-4 dark:border-b-immich-dark-gray">
       <Link href="/photos">
-        <Logo variant="inline" />
+        <LomorageLogo variant="inline" size="small" showSubtitle={false} />
       </Link>
     </div>
   </section>

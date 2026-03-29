@@ -78,18 +78,18 @@
       </Button>
       {#if $user.isAdmin}
         <Button
-          href={Route.systemSettings()}
+          href={Route.lomoSettings()}
           onclick={onClose}
           shape="round"
           variant="ghost"
           size="small"
           color="secondary"
-          aria-current={page.url.pathname.includes('/admin') ? 'page' : undefined}
+          aria-current={page.url.pathname === Route.lomoSettings() ? 'page' : undefined}
           class="border dark:border-immich-dark-gray dark:bg-gray-500 dark:hover:bg-immich-dark-primary/50 hover:bg-immich-primary/10 dark:text-white"
         >
           <div class="flex place-content-center place-items-center text-center gap-2 px-2">
             <Icon icon={mdiWrench} size="18" aria-hidden />
-            {$t('administration')}
+            Lomo Settings
           </div>
         </Button>
       {/if}

@@ -20,6 +20,9 @@ const proxy: Record<string, string | ProxyOptions> = {
   '/custom.css': upstream,
 };
 
+const patchedShortcutPath = path.resolve(__dirname, './src/lib/actions/shortcut.ts');
+const uiDistMarker = '/node_modules/@immich/ui/dist/';
+
 export default defineConfig({
   build: {
     target: 'es2022',
@@ -41,6 +44,26 @@ export default defineConfig({
     proxy,
   },
   plugins: [
+    {
+      name: 'patch-immich-ui-shortcuts',
+      enforce: 'pre',
+      resolveId(source, importer) {
+        if (!importer) {
+          return null;
+        }
+
+        const normalizedImporter = importer.replaceAll('\\', '/');
+        if (!normalizedImporter.includes(uiDistMarker)) {
+          return null;
+        }
+
+        if (source === './actions/shortcut.js' || source === '../actions/shortcut.js') {
+          return patchedShortcutPath;
+        }
+
+        return null;
+      },
+    },
     enhancedImages(),
     tailwindcss(),
     sveltekit(),

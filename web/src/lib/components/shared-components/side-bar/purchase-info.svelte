@@ -10,7 +10,9 @@
   import { handleError } from '$lib/utils/handle-error';
   import { getButtonVisibility } from '$lib/utils/purchase-utils';
   import { updateMyPreferences } from '@immich/sdk';
-  import { Button, Icon, IconButton, Logo, modalManager, SupporterBadge } from '@immich/ui';
+  import LomorageLogo from '$lib/components/branding/LomorageLogo.svelte';
+  import SupporterBadge from '$lib/components/shared-components/side-bar/supporter-badge.svelte';
+  import { Button, Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiClose, mdiInformationOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { SvelteDate } from 'svelte/reactivity';
@@ -86,11 +88,11 @@
       onmouseleave={() => (hoverButton = false)}
       onfocus={onButtonHover}
       onblur={() => (hoverButton = false)}
-      class="p-2 flex justify-between place-items-center place-content-center border border-immich-primary/20 dark:border-immich-dark-primary/10 mt-2 rounded-lg shadow-md dark:bg-immich-dark-primary/10 min-w-52 w-full"
+        class="p-2 flex justify-between place-items-center place-content-center border border-immich-primary/20 dark:border-immich-dark-primary/10 mt-2 rounded-lg shadow-md dark:bg-immich-dark-primary/10 min-w-52 w-full"
     >
       <div class="flex justify-between w-full place-items-center place-content-center">
         <div class="flex place-items-center place-content-center gap-1">
-          <Logo variant="icon" size="tiny" />
+          <LomorageLogo variant="icon" size="tiny" />
           <p class="flex text-primary font-medium">
             {$t('purchase_button_buy_immich')}
           </p>
@@ -117,7 +119,7 @@
     >
       <div class="flex justify-between place-items-center">
         <div class="h-10 w-10">
-          <Logo variant="icon" size="small" />
+          <LomorageLogo variant="icon" size="small" />
         </div>
         <IconButton
           shape="round"

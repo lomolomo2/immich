@@ -17,7 +17,8 @@
   import { handleError } from '$lib/utils/handle-error';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { getAssetInfo, type SharedLinkResponseDto } from '@immich/sdk';
-  import { IconButton, Logo, toastManager } from '@immich/ui';
+  import LomorageLogo from '$lib/components/branding/LomorageLogo.svelte';
+  import { IconButton, toastManager } from '@immich/ui';
   import { mdiArrowLeft, mdiDownload, mdiFileImagePlusOutline, mdiSelectAll } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import ControlAppBar from '../shared-components/control-app-bar.svelte';
@@ -104,7 +105,11 @@
       <ControlAppBar onClose={() => goto(Route.photos())} backIcon={mdiArrowLeft} showBackButton={false}>
         {#snippet leading()}
           <a data-sveltekit-preload-data="hover" class="ms-4" href="/">
-            <Logo variant={mediaQueryManager.maxMd ? 'icon' : 'inline'} class="min-w-10" />
+            <LomorageLogo
+              variant={mediaQueryManager.maxMd ? 'icon' : 'inline'}
+              size={mediaQueryManager.maxMd ? 'medium' : 'small'}
+              showSubtitle={false}
+            />
           </a>
         {/snippet}
 

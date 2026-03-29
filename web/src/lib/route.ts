@@ -116,6 +116,7 @@ export const Route = {
 
   // settings
   userSettings: (params?: { isOpen?: OpenQueryParam }) => '/user-settings' + asQueryString(params),
+  lomoSettings: () => '/lomo-settings',
 
   // system
   systemSettings: (params?: { isOpen?: OpenQueryParam }) => '/admin/system-settings' + asQueryString(params),
