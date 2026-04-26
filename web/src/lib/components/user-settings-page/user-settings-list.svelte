@@ -6,6 +6,7 @@
   import NotificationsSettings from '$lib/components/user-settings-page/notifications-settings.svelte';
   import UserPurchaseSettings from '$lib/components/user-settings-page/user-purchase-settings.svelte';
   import UserUsageStatistic from '$lib/components/user-settings-page/user-usage-statistic.svelte';
+  import MobileUploadSettings from '$lib/components/user-settings-page/mobile-upload-settings.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { user } from '$lib/stores/user.store';
@@ -16,6 +17,7 @@
     mdiAccountOutline,
     mdiApi,
     mdiBellOutline,
+    mdiCellphoneArrowDownVariant,
     mdiCogOutline,
     mdiDevices,
     mdiDownload,
@@ -61,6 +63,15 @@
 
   <SettingAccordion icon={mdiAccountOutline} key="account" title={$t('account')} subtitle={$t('manage_your_account')}>
     <UserProfileSettings />
+  </SettingAccordion>
+
+  <SettingAccordion
+    icon={mdiCellphoneArrowDownVariant}
+    key="mobile-upload"
+    title="Mobile Upload"
+    subtitle="Scan a QR code to upload photos from your phone"
+  >
+    <MobileUploadSettings />
   </SettingAccordion>
 
   <SettingAccordion
