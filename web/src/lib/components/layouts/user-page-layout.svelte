@@ -4,11 +4,12 @@
 
 <script lang="ts">
   import { useActions, type ActionArray } from '$lib/actions/use-actions';
+  import MobileUploadQrModal from '$lib/modals/MobileUploadQrModal.svelte';
   import NavigationBar from '$lib/components/shared-components/navigation-bar/navigation-bar.svelte';
   import UserSidebar from '$lib/components/shared-components/side-bar/user-sidebar.svelte';
   import type { HeaderButtonActionItem } from '$lib/types';
   import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import { Button, ContextMenuButton, HStack, isMenuItemType, type MenuItemType } from '@immich/ui';
+  import { Button, ContextMenuButton, HStack, isMenuItemType, modalManager, type MenuItemType } from '@immich/ui';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -48,7 +49,12 @@
 
 <header>
   {#if !hideNavbar}
-    <NavigationBar onUploadClick={() => openFileUploadDialog()} />
+    <NavigationBar
+      onUploadClick={() => openFileUploadDialog()}
+      onMobileUploadClick={() => {
+        void modalManager.show(MobileUploadQrModal, {});
+      }}
+    />
   {/if}
 </header>
 <div

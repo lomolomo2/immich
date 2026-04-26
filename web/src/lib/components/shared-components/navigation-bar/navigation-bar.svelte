@@ -18,7 +18,14 @@
   import { user } from '$lib/stores/user.store';
   import LomorageLogo from '$lib/components/branding/LomorageLogo.svelte';
   import { ActionButton, Button, IconButton } from '@immich/ui';
-  import { mdiBellBadge, mdiBellOutline, mdiMagnify, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
+  import {
+    mdiBellBadge,
+    mdiBellOutline,
+    mdiCellphoneArrowDownVariant,
+    mdiMagnify,
+    mdiMenu,
+    mdiTrayArrowUp,
+  } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import ThemeButton from '../theme-button.svelte';
@@ -27,11 +34,12 @@
 
   type Props = {
     onUploadClick?: () => void;
+    onMobileUploadClick?: () => void;
     // TODO: remove once this is only used in <AppShellHeader>
     noBorder?: boolean;
   };
 
-  let { onUploadClick, noBorder = false }: Props = $props();
+  let { onUploadClick, onMobileUploadClick, noBorder = false }: Props = $props();
 
   let shouldShowAccountInfoPanel = $state(false);
   let shouldShowNotificationPanel = $state(false);
@@ -127,6 +135,29 @@
             title={$t('upload')}
             aria-label={$t('upload')}
             icon={mdiTrayArrowUp}
+            class="lg:hidden"
+          />
+        {/if}
+
+        {#if !page.url.pathname.includes('/admin') && onMobileUploadClick}
+          <Button
+            leadingIcon={mdiCellphoneArrowDownVariant}
+            onclick={onMobileUploadClick}
+            class="hidden lg:flex"
+            variant="ghost"
+            size="medium"
+            color="secondary"
+            >Mobile Upload
+          </Button>
+          <IconButton
+            color="secondary"
+            shape="round"
+            variant="ghost"
+            size="medium"
+            onclick={onMobileUploadClick}
+            title="Mobile Upload"
+            aria-label="Mobile Upload"
+            icon={mdiCellphoneArrowDownVariant}
             class="lg:hidden"
           />
         {/if}
