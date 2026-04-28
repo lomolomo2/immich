@@ -1566,18 +1566,12 @@
   .brand-logo {
     width: 30px;
     height: 30px;
-    border-radius: 50%;
-    border: 2px solid var(--brand);
-    position: relative;
+    border-radius: 30%;
+    background: url('/lomorage-icon.png') center / contain no-repeat;
     flex-shrink: 0;
   }
   .brand-logo::after {
-    content: '';
-    position: absolute;
-    inset: 5px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #fff 0%, #fff 20%, transparent 22%), var(--brand);
-    opacity: 0.85;
+    content: none;
   }
   .brand-text {
     text-align: left;
@@ -2124,16 +2118,11 @@
   .loader-logo {
     width: 64px;
     height: 64px;
-    border-radius: 50%;
-    border: 2.5px solid var(--brand);
-    position: relative;
+    border-radius: 30%;
+    background: url('/lomorage-icon.png') center / contain no-repeat;
   }
   .loader-logo::after {
-    content: '';
-    position: absolute;
-    inset: 10px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #fff 0%, #fff 18%, transparent 20%), var(--brand);
+    content: none;
   }
   .loader-brand-block {
     text-align: center;
