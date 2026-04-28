@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import UserPageLayout from '$lib/components/layouts/user-page-layout.svelte';
+  import { Route } from '$lib/route';
+  import { clearClientSession } from '$lib/utils/auth';
   import { Alert, Button, Container, LoadingSpinner } from '@immich/ui';
   import { onMount } from 'svelte';
   import type { PageData } from './$types';
@@ -19,19 +22,35 @@
       invoke?: TauriInvoke;
     };
   };
+  type BackendMode = 'local' | 'remote';
   type LomoSettingsResponse = {
+    active_backend_mode?: BackendMode;
     photos_dir?: string;
+    backend_mode?: BackendMode;
+    remote_lomod_url?: string;
+    local?: {
+      photos_dir?: string;
+      setup_completed?: boolean;
+    };
+    remote?: {
+      default_url?: string;
+    };
   };
 
   const { data }: Props = $props();
 
   let photosDir = $state('');
   let originalPhotosDir = $state('');
+  let backendMode = $state<BackendMode>('local');
+  let originalBackendMode = $state<BackendMode>('local');
+  let remoteLomodUrl = $state('');
+  let originalRemoteLomodUrl = $state('');
   let loading = $state(true);
   let saving = $state(false);
   let isDesktop = $state(false);
   let errorMessage = $state('');
   let successMessage = $state('');
+  const activeBackendLabel = $derived(backendMode === 'local' ? 'Bundled Local' : 'Remote Server');
 
   const getTauriInvoke = (): TauriInvoke | null => {
     const globals = globalThis as TauriGlobals;
@@ -48,9 +67,17 @@
     return null;
   };
 
-  const setCurrentDir = (value: string) => {
-    photosDir = value;
-    originalPhotosDir = value;
+  const setCurrentSettings = (value: LomoSettingsResponse) => {
+    const nextPhotosDir = value.local?.photos_dir ?? value.photos_dir ?? '';
+    const nextBackendMode = value.active_backend_mode ?? value.backend_mode ?? 'local';
+    const nextRemoteLomodUrl = value.remote?.default_url ?? value.remote_lomod_url ?? '';
+
+    photosDir = nextPhotosDir;
+    originalPhotosDir = nextPhotosDir;
+    backendMode = nextBackendMode;
+    originalBackendMode = nextBackendMode;
+    remoteLomodUrl = nextRemoteLomodUrl;
+    originalRemoteLomodUrl = nextRemoteLomodUrl;
   };
 
   const loadSettings = async () => {
@@ -59,7 +86,7 @@
 
     if (invoke) {
       const data = await invoke('get_app_settings');
-      setCurrentDir(data?.photos_dir ?? '');
+      setCurrentSettings(data as LomoSettingsResponse);
       return;
     }
 
@@ -69,7 +96,7 @@
     }
 
     const data = (await response.json()) as LomoSettingsResponse;
-    setCurrentDir(data.photos_dir ?? '');
+    setCurrentSettings(data);
   };
 
   const browseForFolder = async () => {
@@ -89,13 +116,20 @@
 
   const resetChanges = () => {
     photosDir = originalPhotosDir;
+    backendMode = originalBackendMode;
+    remoteLomodUrl = originalRemoteLomodUrl;
     errorMessage = '';
     successMessage = '';
   };
 
   const saveSettings = async () => {
     const nextDir = photosDir.trim();
-    if (!nextDir || nextDir === originalPhotosDir) {
+    const nextRemoteUrl = remoteLomodUrl.trim();
+    const hasChanges =
+      nextDir !== originalPhotosDir ||
+      backendMode !== originalBackendMode ||
+      nextRemoteUrl !== originalRemoteLomodUrl;
+    if (!hasChanges) {
       return;
     }
 
@@ -106,9 +140,13 @@
     try {
       const invoke = getTauriInvoke();
       if (invoke) {
-        await invoke('save_app_settings', { photosDir: nextDir });
-        setCurrentDir(nextDir);
-        successMessage = 'Settings saved. Lomo backend restarted with the new storage folder.';
+        await invoke('save_app_settings', {
+          photosDir: nextDir,
+          backendMode,
+          remoteLomodUrl: nextRemoteUrl,
+        });
+        await clearClientSession();
+        await goto(Route.login(), { invalidateAll: true });
         return;
       }
 
@@ -117,7 +155,11 @@
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ photos_dir: nextDir }),
+        body: JSON.stringify({
+          photos_dir: nextDir,
+          backend_mode: backendMode,
+          remote_lomod_url: nextRemoteUrl,
+        }),
       });
 
       const data = (await response.json().catch(() => ({}))) as { error?: string };
@@ -125,8 +167,15 @@
         throw new Error(data.error ?? `Failed to save settings (${response.status})`);
       }
 
-      setCurrentDir(nextDir);
-      successMessage = 'Settings saved. Restart the app to apply the new storage folder.';
+      setCurrentSettings({
+        photos_dir: nextDir,
+        backend_mode: backendMode,
+        remote_lomod_url: nextRemoteUrl,
+      });
+      successMessage =
+        backendMode === 'local'
+          ? 'Settings saved. Restart the app to apply the local backend configuration.'
+          : 'Settings saved. Restart the app to use the remote Lomo server by default.';
     } catch (error) {
       errorMessage = `Failed to save settings: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
@@ -134,7 +183,17 @@
     }
   };
 
-  const canSave = $derived(Boolean(photosDir.trim()) && photosDir.trim() !== originalPhotosDir && !saving);
+  const hasChanges = $derived(
+    photosDir.trim() !== originalPhotosDir ||
+      backendMode !== originalBackendMode ||
+      remoteLomodUrl.trim() !== originalRemoteLomodUrl,
+  );
+  const canSave = $derived(
+    !saving &&
+      hasChanges &&
+      ((backendMode === 'local' && Boolean(photosDir.trim())) ||
+        (backendMode === 'remote' && Boolean(remoteLomodUrl.trim()))),
+  );
   const effectiveAdminPath = $derived(photosDir.trim() ? `${photosDir.trim()}/admin` : '<selected-folder>/admin');
 
   onMount(() => {
@@ -152,7 +211,7 @@
   <Container size="small" center>
     <div class="mt-4 flex flex-col gap-4">
       <Alert color="warning" class="text-dark">
-        Changing this folder does not move existing photos. New writes will use the selected folder after save.
+        Changing backend mode does not migrate data. Local folder updates also do not move existing photos automatically.
       </Alert>
 
       {#if !loading && !isDesktop}
@@ -169,31 +228,120 @@
         {:else}
           <div class="flex flex-col gap-5">
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-primary" for="photos-dir">Photos Storage Directory</label>
+              <div class="text-sm font-medium text-primary">Backend Mode</div>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                This folder becomes the Lomo storage root. The default admin library will live under
-                <code class="rounded bg-black/5 px-1 py-0.5 dark:bg-white/10">{effectiveAdminPath}</code>.
+                Use the bundled local <code>lomod</code> managed by the desktop app, or point the app at a remote
+                Lomo server.
               </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                The local storage folder and the remote server URL are saved independently. Switching modes will make
+                the app sign in again against the selected backend.
+              </p>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  class={`rounded-2xl border px-4 py-3 text-left transition ${
+                    backendMode === 'local'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-gray-200 bg-white text-primary dark:border-gray-700 dark:bg-neutral-950'
+                  }`}
+                  onclick={() => (backendMode = 'local')}
+                  disabled={saving}
+                >
+                  <div class="font-medium">Bundled Local</div>
+                  <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">Runs the packaged <code>lomod</code> on <code>localhost:8000</code>.</div>
+                </button>
+                <button
+                  type="button"
+                  class={`rounded-2xl border px-4 py-3 text-left transition ${
+                    backendMode === 'remote'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-gray-200 bg-white text-primary dark:border-gray-700 dark:bg-neutral-950'
+                  }`}
+                  onclick={() => (backendMode = 'remote')}
+                  disabled={saving}
+                >
+                  <div class="font-medium">Remote Server</div>
+                  <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">Keeps the desktop app from depending on a local setup flow.</div>
+                </button>
+              </div>
             </div>
 
-            <div class="flex gap-2 max-sm:flex-col">
+            <Alert color="info" class="text-dark">
+              Active backend: <strong>{activeBackendLabel}</strong>. The two sections below are saved separately, then the selected backend mode decides which one is used after sign-in.
+            </Alert>
+
+            <section
+              class={`rounded-2xl border p-4 ${
+                backendMode === 'local'
+                  ? 'border-primary/30 bg-primary/5'
+                  : 'border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-neutral-950'
+              }`}
+            >
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between gap-3">
+                  <label class="text-sm font-medium text-primary" for="photos-dir">Local Backend Configuration</label>
+                  <span class="rounded-full bg-black/5 px-2 py-1 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-300">
+                    {backendMode === 'local' ? 'Active' : 'Saved separately'}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  This folder becomes the Lomo storage root. The default admin library will live under
+                  <code class="rounded bg-black/5 px-1 py-0.5 dark:bg-white/10">{effectiveAdminPath}</code>.
+                </p>
+              </div>
+
+              <div class="mt-3 flex gap-2 max-sm:flex-col">
+                <input
+                  id="photos-dir"
+                  class="immich-form-input w-full"
+                  type="text"
+                  bind:value={photosDir}
+                  placeholder="Select a folder for photo storage"
+                  disabled={saving}
+                />
+                <Button onclick={browseForFolder} disabled={!isDesktop || saving} color="secondary" variant="ghost">
+                  Browse
+                </Button>
+              </div>
+
+              <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                Saving this value does not switch you to local mode automatically. It only updates the local backend configuration.
+              </p>
+            </section>
+
+            <section
+              class={`rounded-2xl border p-4 ${
+                backendMode === 'remote'
+                  ? 'border-primary/30 bg-primary/5'
+                  : 'border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-neutral-950'
+              }`}
+            >
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between gap-3">
+                  <label class="text-sm font-medium text-primary" for="remote-lomod-url">Remote Backend Configuration</label>
+                  <span class="rounded-full bg-black/5 px-2 py-1 text-xs font-medium text-gray-500 dark:bg-white/10 dark:text-gray-300">
+                    {backendMode === 'remote' ? 'Active' : 'Saved separately'}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Enter the base URL for the remote server, for example <code>http://192.168.1.73:8000</code>.
+                </p>
+              </div>
+
               <input
-                id="photos-dir"
-                class="immich-form-input w-full"
+                id="remote-lomod-url"
+                class="immich-form-input mt-3 w-full"
                 type="text"
-                bind:value={photosDir}
-                placeholder="Select a folder for photo storage"
+                bind:value={remoteLomodUrl}
+                placeholder="http://192.168.1.73:8000"
                 disabled={saving}
               />
-              <Button onclick={browseForFolder} disabled={!isDesktop || saving} color="secondary" variant="ghost">
-                Browse
-              </Button>
-            </div>
 
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              The Lomo backend API uses the selected folder as its effective <code>--mount-dir</code>, while user homes
-              are created under that root.
-            </p>
+              <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                Saving this value does not switch you to remote mode automatically. It only updates the remembered remote backend URL.
+              </p>
+            </section>
 
             {#if errorMessage}
               <Alert color="danger" class="text-dark">
@@ -208,11 +356,11 @@
             {/if}
 
             <div class="flex justify-end gap-2">
-              <Button onclick={resetChanges} disabled={saving || photosDir === originalPhotosDir} color="secondary" variant="ghost">
+              <Button onclick={resetChanges} disabled={saving || !hasChanges} color="secondary" variant="ghost">
                 Reset
               </Button>
               <Button onclick={saveSettings} disabled={!canSave}>
-                {saving ? 'Saving...' : isDesktop ? 'Save & Restart' : 'Save'}
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </div>
           </div>

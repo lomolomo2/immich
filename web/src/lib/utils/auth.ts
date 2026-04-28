@@ -3,7 +3,7 @@ import { eventManager } from '$lib/managers/event-manager.svelte';
 import { Route } from '$lib/route';
 import { preferences as preferences$, user as user$ } from '$lib/stores/user.store';
 import { userInteraction } from '$lib/stores/user.svelte';
-import { getMyPreferences, getMyUser, getStorage } from '@immich/sdk';
+import { getMyPreferences, getMyUser, getStorage, logout } from '@immich/sdk';
 import { redirect } from '@sveltejs/kit';
 import { DateTime } from 'luxon';
 import { get } from 'svelte/store';
@@ -18,7 +18,16 @@ export const loadUser = async () => {
     let user = get(user$);
     let preferences = get(preferences$);
 
-    if ((!user || !preferences) && hasAuthCookie()) {
+    if (!hasAuthCookie()) {
+      return null;
+    }
+
+    if (!(await hasValidSession())) {
+      await clearClientSession();
+      return null;
+    }
+
+    if (!user || !preferences) {
       [user, preferences] = await Promise.all([getMyUser(), getMyPreferences()]);
       user$.set(user);
       preferences$.set(preferences);
@@ -43,6 +52,45 @@ const hasAuthCookie = (): boolean => {
   }
 
   return false;
+};
+
+const hasValidSession = async (): Promise<boolean> => {
+  if (!browser) {
+    return false;
+  }
+
+  try {
+    const response = await fetch('/api/auth/validateToken', { method: 'POST' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
+const clearBrowserAuthCookies = () => {
+  if (!browser) {
+    return;
+  }
+
+  for (const cookieName of ['immich_is_authenticated', 'immich_auth_type']) {
+    document.cookie = `${cookieName}=; Max-Age=0; path=/`;
+  }
+};
+
+export const clearClientSession = async (): Promise<string | undefined> => {
+  let redirectUri: string | undefined;
+
+  try {
+    const response = await logout();
+    redirectUri = response.redirectUri;
+  } catch (error) {
+    console.log('Error clearing auth session:', error);
+  } finally {
+    clearBrowserAuthCookies();
+    eventManager.emit('AuthLogout');
+  }
+
+  return redirectUri;
 };
 
 export const authenticate = async (url: URL, options?: AuthOptions) => {

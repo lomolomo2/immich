@@ -1,9 +1,9 @@
-import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { Route } from '$lib/route';
+import { clearClientSession } from '$lib/utils/auth';
 import { isSharedLinkRoute } from '$lib/utils/navigation';
-import { getAboutInfo, logout, type UserAdminResponseDto } from '@immich/sdk';
+import { getAboutInfo, type UserAdminResponseDto } from '@immich/sdk';
 
 class AuthManager {
   isPurchased = $state(false);
@@ -29,29 +29,9 @@ class AuthManager {
   }
 
   async logout() {
-    let redirectUri;
-
-    try {
-      const response = await logout();
-      if (response.redirectUri) {
-        redirectUri = response.redirectUri;
-      }
-    } catch (error) {
-      console.log('Error logging out:', error);
-    }
-
-    redirectUri = redirectUri ?? Route.login();
-
-    try {
-      if (redirectUri.startsWith('/')) {
-        await goto(redirectUri);
-      } else {
-        globalThis.location.href = redirectUri;
-      }
-    } finally {
-      this.isPurchased = false;
-      eventManager.emit('AuthLogout');
-    }
+    await clearClientSession();
+    this.isPurchased = false;
+    globalThis.location.replace(Route.login({ showChooser: 1 }));
   }
 }
 

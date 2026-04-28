@@ -12,7 +12,7 @@
   }>();
 
   const onReleaseEvent = async (release: ReleaseEvent) => {
-    if (!release.isAvailable || !$user.isAdmin) {
+    if (!release.isAvailable || !$user?.isAdmin) {
       return;
     }
 
