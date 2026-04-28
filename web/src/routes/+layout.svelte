@@ -1,7 +1,6 @@
 <script lang="ts">
   import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { shortcut } from '$lib/actions/shortcut';
   import DownloadPanel from '$lib/components/asset-viewer/download-panel.svelte';
   import ErrorLayout from '$lib/components/layouts/ErrorLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
@@ -17,7 +16,6 @@
   import { sidebarStore } from '$lib/stores/sidebar.svelte';
   import { user } from '$lib/stores/user.store';
   import { closeWebsocketConnection, openWebsocketConnection, websocketStore } from '$lib/stores/websocket';
-  import { copyToClipboard } from '$lib/utils';
   import { maintenanceShouldRedirect } from '$lib/utils/maintenance';
   import { isAssetViewerRoute } from '$lib/utils/navigation';
   import { getServerConfig } from '@immich/sdk';
@@ -77,16 +75,12 @@
 
   let showNavigationLoadingBar = $state(false);
 
-  const getMyImmichLink = () => {
-    return new URL(page.url.pathname + page.url.search, 'https://my.immich.app');
-  };
-
   toastManager.setOptions({ class: 'top-16 fixed' });
 
   onMount(() => {
     const element = document.querySelector('#stencil');
     element?.remove();
-    // if the browser theme changes, changes the Immich theme too
+    // Keep the app theme in sync with the browser theme.
   });
 
   eventManager.emit('AppInit');
@@ -108,14 +102,13 @@
 
   const { serverRestarting } = websocketStore;
 
-  // Disabled for lomo-backend proxy (no WebSocket support)
-  // $effect.pre(() => {
-  //   if ($user || $serverRestarting || page.url.pathname.startsWith(Route.maintenanceMode())) {
-  //     openWebsocketConnection();
-  //   } else {
-  //     closeWebsocketConnection();
-  //   }
-  // });
+  $effect.pre(() => {
+    if ($user || $serverRestarting || page.url.pathname.startsWith(Route.maintenanceMode())) {
+      openWebsocketConnection();
+    } else {
+      closeWebsocketConnection();
+    }
+  });
 
   serverRestarting.subscribe((isRestarting) => {
     if (!isRestarting) {
@@ -191,7 +184,7 @@
 <VersionAnnouncement />
 
 <svelte:head>
-  <title>{page.data.meta?.title || 'Web'} - Immich</title>
+  <title>{page.data.meta?.title || 'Web'} - Lomo Photo Viewer</title>
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   <meta name="theme-color" content="white" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="black" media="(prefers-color-scheme: dark)" />
@@ -228,13 +221,6 @@
     {/if}
   {/if}
 </svelte:head>
-
-<svelte:document
-  use:shortcut={{
-    shortcut: { ctrl: true, shift: true, key: 'm' },
-    onShortcut: () => copyToClipboard(getMyImmichLink().toString()),
-  }}
-/>
 
 <TooltipProvider>
   {#if page.data.error}

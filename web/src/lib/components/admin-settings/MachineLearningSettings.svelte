@@ -136,7 +136,7 @@
               <p class="immich-form-label pb-2 text-sm">
                 <FormatMessage key="admin.machine_learning_clip_model_description">
                   {#snippet children({ message })}
-                    <a target="_blank" href="https://huggingface.co/immich-app"><u>{message}</u></a>
+                    <span>{message}</span>
                   {/snippet}
                 </FormatMessage>
               </p>

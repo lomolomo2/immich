@@ -2,7 +2,7 @@
   import ServerAboutItem from '$lib/components/ServerAboutItem.svelte';
   import { locale } from '$lib/stores/preferences.store';
   import { type ServerAboutResponseDto, type ServerVersionHistoryResponseDto } from '@immich/sdk';
-  import { Alert, Label, Modal, ModalBody } from '@immich/ui';
+  import { Label, Modal, ModalBody } from '@immich/ui';
   import { DateTime } from 'luxon';
   import { t } from 'svelte-i18n';
 
@@ -18,11 +18,7 @@
 <Modal title={$t('about')} {onClose}>
   <ModalBody>
     <div class="flex flex-col sm:grid sm:grid-cols-2 gap-4">
-      {#if info.sourceRef === 'main' && info.repository === 'immich-app/immich'}
-        <Alert color="warning" title={$t('main_branch_warning')} class="col-span-full" size="small" />
-      {/if}
-
-      <ServerAboutItem id="immich" title="Immich" version={info.version} versionHref={info.versionUrl} />
+      <ServerAboutItem id="lomo-photo-viewer" title="Lomo Photo Viewer" version={info.version} />
       <ServerAboutItem id="exif" title="ExifTool" version={info.exiftool} />
       <ServerAboutItem id="nodejs" title="Node.js" version={info.nodejs} />
       <ServerAboutItem id="libvips" title="Libvips" version={info.libvips} />
@@ -40,12 +36,7 @@
       />
 
       {#if info.repository && info.repositoryUrl}
-        <ServerAboutItem
-          id="repository"
-          title={$t('repository')}
-          version={info.repository}
-          versionHref={info.repositoryUrl}
-        />
+        <ServerAboutItem id="repository" title={$t('repository')} version={info.repository} />
       {/if}
 
       {#if info.sourceRef && info.sourceCommit && info.sourceUrl}
@@ -53,21 +44,15 @@
           id="source"
           title={$t('source')}
           version="{info.sourceRef}@{info.sourceCommit.slice(0, 9)}"
-          versionHref={info.sourceUrl}
         />
       {/if}
 
       {#if info.build && info.buildUrl}
-        <ServerAboutItem id="build" title={$t('build')} version={info.build} versionHref={info.buildUrl} />
+        <ServerAboutItem id="build" title={$t('build')} version={info.build} />
       {/if}
 
       {#if info.buildImage && info.buildImage}
-        <ServerAboutItem
-          id="build-image"
-          title={$t('build_image')}
-          version={info.buildImage}
-          versionHref={info.buildImageUrl}
-        />
+        <ServerAboutItem id="build-image" title={$t('build_image')} version={info.buildImage} />
       {/if}
 
       <div class="col-span-full">

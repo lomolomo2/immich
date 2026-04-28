@@ -93,9 +93,7 @@
       <div class="flex justify-between w-full place-items-center place-content-center">
         <div class="flex place-items-center place-content-center gap-1">
           <LomorageLogo variant="icon" size="tiny" />
-          <p class="flex text-primary font-medium">
-            {$t('purchase_button_buy_immich')}
-          </p>
+          <p class="flex text-primary font-medium">Lomo</p>
         </div>
 
         <div>
@@ -149,9 +147,7 @@
         </p>
       </div>
 
-      <Button shape="round" class="mt-2" fullWidth onclick={openPurchaseModal}
-        >{$t('purchase_button_buy_immich')}</Button
-      >
+      <Button shape="round" class="mt-2" fullWidth onclick={openPurchaseModal}>Lomo</Button>
       <div class="mt-3 flex gap-4">
         <Button shape="round" size="small" fullWidth color="secondary" variant="ghost" onclick={() => hideButton(true)}>
           {$t('purchase_button_never_show_again')}

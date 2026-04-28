@@ -4,16 +4,14 @@
   import {
     Card,
     CardBody,
-    CardFooter,
     CardHeader,
     CardTitle,
     Icon,
     IconButton,
     Link,
     Text,
-    VStack,
   } from '@immich/ui';
-  import { mdiAlarmLight, mdiCodeTags, mdiContentCopy, mdiMessage, mdiPartyPopper } from '@mdi/js';
+  import { mdiAlarmLight, mdiContentCopy } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -64,27 +62,6 @@
             <pre id="stacktrace" class="text-xs">{error.stack}</pre>
           {/if}
         </CardBody>
-
-        <CardFooter class="items-start">
-          <Link href="https://discord.immich.app" class="flex grow basis-0 justify-center">
-            <VStack>
-              <Icon icon={mdiMessage} size="24" />
-              <Text size="small" class="text-center">{$t('get_help')}</Text>
-            </VStack>
-          </Link>
-          <Link href="https://github.com/immich-app/immich/releases" class="flex grow basis-0 justify-center">
-            <VStack>
-              <Icon icon={mdiPartyPopper} size="24" />
-              <Text size="small" class="text-center">{$t('read_changelog')}</Text>
-            </VStack>
-          </Link>
-          <Link href="https://docs.immich.app/guides/docker-help" class="flex grow basis-0 justify-center">
-            <VStack>
-              <Icon icon={mdiCodeTags} size="24" />
-              <Text size="small" class="text-center">{$t('check_logs')}</Text>
-            </VStack>
-          </Link>
-        </CardFooter>
       </Card>
     </div>
   </div>

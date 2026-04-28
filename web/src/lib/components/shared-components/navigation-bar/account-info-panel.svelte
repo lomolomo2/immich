@@ -2,14 +2,10 @@
   import { page } from '$app/state';
   import { focusTrap } from '$lib/actions/focus-trap';
   import AvatarEditModal from '$lib/modals/AvatarEditModal.svelte';
-  import HelpAndFeedbackModal from '$lib/modals/HelpAndFeedbackModal.svelte';
   import { Route } from '$lib/route';
   import { user } from '$lib/stores/user.store';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { getAboutInfo, type ServerAboutResponseDto } from '@immich/sdk';
   import { Button, Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiCog, mdiLogout, mdiPencil, mdiWrench } from '@mdi/js';
-  import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
   import UserAvatar from '../user-avatar.svelte';
@@ -20,12 +16,6 @@
   }
 
   let { onLogout, onClose = () => {} }: Props = $props();
-
-  let info: ServerAboutResponseDto | undefined = $state();
-
-  onMount(async () => {
-    info = userInteraction.aboutInfo ?? (await getAboutInfo());
-  });
 </script>
 
 <div
@@ -38,6 +28,7 @@
   <div
     class="mx-4 mt-4 flex flex-col items-center justify-center gap-4 rounded-t-3xl bg-white p-4 dark:bg-immich-dark-primary/10"
   >
+    {#if $user}
     <div class="relative">
       <UserAvatar user={$user} size="xl" />
       <div class="absolute bottom-0 end-0 rounded-full w-6 h-6">
@@ -60,6 +51,7 @@
       </p>
       <p class="text-sm text-gray-500 dark:text-immich-dark-fg">{$user.email}</p>
     </div>
+    {/if}
 
     <div class="flex flex-col gap-1">
       <Button
@@ -76,7 +68,7 @@
           {$t('account_settings')}
         </div>
       </Button>
-      {#if $user.isAdmin}
+      {#if $user?.isAdmin}
         <Button
           href={Route.lomoSettings()}
           onclick={onClose}
@@ -105,17 +97,5 @@
       color="secondary">{$t('sign_out')}</Button
     >
 
-    <button
-      type="button"
-      class="text-center mt-4 underline text-xs text-primary"
-      onclick={async () => {
-        onClose();
-        if (info) {
-          await modalManager.show(HelpAndFeedbackModal, { info });
-        }
-      }}
-    >
-      {$t('support_and_feedback')}
-    </button>
   </div>
 </div>
