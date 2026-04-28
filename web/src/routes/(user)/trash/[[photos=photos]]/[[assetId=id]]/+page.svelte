@@ -49,6 +49,7 @@
     actions={assetInteraction.selectionActive ? [] : [Empty, RestoreAll]}
     title={data.meta.title}
     scrollbar={false}
+    scrollMode="child"
   >
     <Timeline enableRouting={true} bind:timelineManager {options} {assetInteraction} onEscape={handleEscape}>
       <p class="font-medium text-gray-500/60 dark:text-gray-300/60 p-4">

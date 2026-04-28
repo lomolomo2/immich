@@ -101,7 +101,7 @@
   );
 </script>
 
-<UserPageLayout hideNavbar={assetInteraction.selectionActive} scrollbar={false}>
+<UserPageLayout hideNavbar={assetInteraction.selectionActive} scrollbar={false} scrollMode="child">
   <Timeline
     enableRouting={true}
     bind:timelineManager

@@ -45,7 +45,7 @@
   };
 </script>
 
-<UserPageLayout hideNavbar={assetInteraction.selectionActive} title={data.meta.title} scrollbar={false}>
+<UserPageLayout hideNavbar={assetInteraction.selectionActive} title={data.meta.title} scrollbar={false} scrollMode="child">
   <Timeline
     enableRouting={true}
     bind:timelineManager

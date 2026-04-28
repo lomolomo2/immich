@@ -50,12 +50,10 @@ export function scrollMemory(
       await beforeScroll?.();
 
       const newScroll = sessionStorage.getItem(SessionStorageKey.SCROLL_POSITION);
-      if (newScroll) {
-        node.scroll({
-          top: Number.parseFloat(newScroll),
-          behavior: 'instant',
-        });
-      }
+      node.scroll({
+        top: newScroll ? Number.parseFloat(newScroll) : 0,
+        behavior: 'instant',
+      });
       beforeClear?.();
       sessionStorage.removeItem(SessionStorageKey.SCROLL_POSITION);
     })(),

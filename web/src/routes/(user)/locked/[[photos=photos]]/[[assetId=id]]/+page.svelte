@@ -59,6 +59,7 @@
   actions={[LockSession]}
   hideNavbar={assetInteraction.selectionActive}
   scrollbar={false}
+  scrollMode="child"
 >
   <Timeline
     enableRouting={true}

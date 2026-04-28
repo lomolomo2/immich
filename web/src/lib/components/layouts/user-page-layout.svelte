@@ -13,11 +13,14 @@
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 
+  type ScrollMode = 'layout' | 'child';
+
   interface Props {
     hideNavbar?: boolean;
     title?: string | undefined;
     description?: string | undefined;
     scrollbar?: boolean;
+    scrollMode?: ScrollMode;
     use?: ActionArray;
     actions?: Array<HeaderButtonActionItem | MenuItemType>;
     sidebar?: Snippet;
@@ -30,6 +33,7 @@
     title = undefined,
     description = undefined,
     scrollbar = true,
+    scrollMode = 'layout',
     use = [],
     actions = [],
     sidebar,
@@ -45,6 +49,8 @@
 
   let scrollbarClass = $derived(scrollbar ? 'immich-scrollbar' : 'scrollbar-hidden');
   let hasTitleClass = $derived(title ? 'top-16 h-[calc(100%-(--spacing(16)))]' : 'top-0 h-full');
+  let contentScrollClass = $derived(scrollMode === 'layout' ? 'overflow-y-auto' : 'overflow-hidden');
+  let contentScrollbarClass = $derived(scrollMode === 'layout' ? scrollbarClass : 'scrollbar-hidden');
 </script>
 
 <header>
@@ -59,7 +65,7 @@
 </header>
 <div
   tabindex="-1"
-  class="relative z-0 grid grid-cols-[--spacing(0)_auto] overflow-hidden sidebar:grid-cols-[--spacing(64)_auto]
+  class="relative z-0 grid grid-cols-[--spacing(0)_1fr] overflow-hidden sidebar:grid-cols-[--spacing(64)_1fr]
     {hideNavbar ? 'h-dvh' : 'h-[calc(100dvh-var(--navbar-height))] max-md:h-[calc(100dvh-var(--navbar-height-md))]'}
     {hideNavbar ? 'pt-(--navbar-height)' : ''}
     {hideNavbar ? 'max-md:pt-(--navbar-height-md)' : ''}"
@@ -70,8 +76,12 @@
     <UserSidebar />
   {/if}
 
-  <main class="relative">
-    <div class="{scrollbarClass} absolute {hasTitleClass} w-full overflow-y-auto p-2" use:useActions={use}>
+  <main class="relative min-w-0 overflow-hidden">
+    <div
+      class="{contentScrollbarClass} {contentScrollClass} absolute {hasTitleClass} w-full overflow-x-hidden p-2"
+      data-testid="user-page-content"
+      use:useActions={use}
+    >
       {@render children?.()}
     </div>
 
