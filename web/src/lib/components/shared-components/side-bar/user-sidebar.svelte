@@ -9,8 +9,6 @@
   import { NavbarGroup, NavbarItem } from '@immich/ui';
   import {
     mdiAccount,
-    mdiAccountMultiple,
-    mdiAccountMultipleOutline,
     mdiAccountOutline,
     mdiArchiveArrowDown,
     mdiArchiveArrowDownOutline,
@@ -54,13 +52,6 @@
   {#if $preferences.sharedLinks.enabled && $preferences.sharedLinks.sidebarWeb}
     <NavbarItem title={$t('shared_links')} href={Route.sharedLinks()} icon={mdiLink} />
   {/if}
-
-  <NavbarItem
-    title={$t('sharing')}
-    href={Route.sharing()}
-    icon={mdiAccountMultipleOutline}
-    activeIcon={mdiAccountMultiple}
-  />
 
   <NavbarGroup title={$t('library')} size="tiny" />
 
