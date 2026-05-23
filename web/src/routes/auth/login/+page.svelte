@@ -47,6 +47,23 @@
     photos_dir?: string;
     has_existing_user_db?: boolean;
     existing_assets_db_paths?: string[];
+    existing_library_databases?: LocalLibraryDbCandidate[];
+  };
+  type LocalLibraryDbUser = {
+    id: number;
+    user_name: string;
+    email?: string;
+    nick_name?: string;
+    home_dir: string;
+    admin?: boolean;
+    status?: number;
+  };
+  type LocalLibraryDbCandidate = {
+    path: string;
+    source?: string;
+    users?: LocalLibraryDbUser[];
+    user_count?: number;
+    load_error?: string | null;
   };
 
   const REMOTE_SERVER_ADDRESS_STORAGE_KEY = 'lomo_remote_server_address';
@@ -75,6 +92,8 @@
   let setupErrorMessage = $state('');
   let setupStateWarning = $state('');
   let setupFolderInspection = $state<LocalLibraryInspection | null>(null);
+  let selectedExistingLibraryDbPath = $state('');
+  let selectedExistingLibraryUserName = $state('');
   let setupFolderInspectionLoading = $state(false);
   let useExistingLibraryLoading = $state(false);
   let changingLocalFolder = $state(false);
@@ -142,7 +161,37 @@
   const strengthLabel = $derived(['Too short', 'Weak', 'Good', 'Strong'][passwordStrength]);
   const setupAdminPath = $derived(setupPhotosDir.trim() ? `${setupPhotosDir.trim()}/admin` : '<selected-folder>/admin');
   const existingLibraryDbPaths = $derived(setupFolderInspection?.existing_assets_db_paths ?? []);
-  const hasExistingLibraryInSelectedFolder = $derived(setupFolderInspection?.has_existing_user_db ?? false);
+  const existingLibraryDatabases = $derived.by(() => {
+    const inspected = setupFolderInspection?.existing_library_databases ?? [];
+    if (inspected.length > 0) {
+      return inspected;
+    }
+
+    return existingLibraryDbPaths.map((path) => ({
+      path,
+      source: 'Selected folder database',
+      users: [],
+      user_count: 0,
+      load_error: null,
+    }));
+  });
+  const availableExistingLibraryDatabases = $derived(
+    existingLibraryDatabases.filter((database) => (database.user_count ?? database.users?.length ?? 0) > 0),
+  );
+  const selectedExistingLibraryDb = $derived(
+    availableExistingLibraryDatabases.find((database) => database.path === selectedExistingLibraryDbPath) ??
+      availableExistingLibraryDatabases[0] ??
+      null,
+  );
+  const selectedExistingLibraryUsers = $derived(selectedExistingLibraryDb?.users ?? []);
+  const selectedExistingLibraryUser = $derived(
+    selectedExistingLibraryUsers.find((user) => user.user_name === selectedExistingLibraryUserName) ??
+      selectedExistingLibraryUsers[0] ??
+      null,
+  );
+  const hasExistingLibraryInSelectedFolder = $derived(
+    (setupFolderInspection?.has_existing_user_db ?? false) || availableExistingLibraryDatabases.length > 0,
+  );
 
   const getStoredRemoteServerUrl = (): string | undefined => {
     const address = globalThis.localStorage?.getItem(REMOTE_SERVER_ADDRESS_STORAGE_KEY)?.trim();
@@ -250,11 +299,24 @@
     return null;
   };
 
+  const applyExistingLibraryDefaults = (inspection: LocalLibraryInspection | null) => {
+    const databases = inspection?.existing_library_databases ?? [];
+    const databasesWithUsers = databases.filter((database) => (database.user_count ?? database.users?.length ?? 0) > 0);
+    const currentDatabase = databasesWithUsers.find((database) => database.path === selectedExistingLibraryDbPath);
+    const nextDatabase = currentDatabase ?? databasesWithUsers[0];
+    selectedExistingLibraryDbPath = nextDatabase?.path ?? '';
+
+    const users = nextDatabase?.users ?? [];
+    const currentUser = users.find((user) => user.user_name === selectedExistingLibraryUserName);
+    selectedExistingLibraryUserName = currentUser?.user_name ?? users[0]?.user_name ?? '';
+  };
+
   const refreshSetupFolderInspection = async (photosDir = setupPhotosDir): Promise<LocalLibraryInspection | null> => {
     const invoke = getTauriInvoke();
     const nextDir = normalizeFolderPath(photosDir);
     if (!invoke || !nextDir) {
       setupFolderInspection = null;
+      applyExistingLibraryDefaults(null);
       setupFolderInspectionLoading = false;
       return null;
     }
@@ -266,6 +328,7 @@
       })) as LocalLibraryInspection;
       if (normalizeFolderPath(setupPhotosDir) === nextDir) {
         setupFolderInspection = inspection;
+        applyExistingLibraryDefaults(inspection);
       }
       return inspection;
     } finally {
@@ -283,6 +346,16 @@
 
     const segments = normalizedPath.split('\\').filter(Boolean);
     return segments.slice(-2).join('\\') || normalizedPath;
+  };
+
+  const selectExistingLibraryDatabase = (database: LocalLibraryDbCandidate) => {
+    selectedExistingLibraryDbPath = database.path;
+    selectedExistingLibraryUserName = database.users?.[0]?.user_name ?? '';
+  };
+
+  const existingLibraryUserLabel = (user: LocalLibraryDbUser) => {
+    const displayName = user.nick_name?.trim() || user.email?.trim();
+    return displayName ? `${user.user_name} (${displayName})` : user.user_name;
   };
 
   const onSuccess = async (user: LoginResponseDto) => {
@@ -496,6 +569,7 @@
     if (selected) {
       setupPhotosDir = selected;
       setupFolderInspection = null;
+      applyExistingLibraryDefaults(null);
       await refreshSetupFolderInspection(selected);
     }
   };
@@ -510,6 +584,7 @@
     setupPassword = '';
     setupPasswordConfirm = '';
     setupFolderInspection = null;
+    applyExistingLibraryDefaults(null);
     await refreshSetupFolderInspection(setupPhotosDir);
   };
 
@@ -517,6 +592,7 @@
     changingLocalFolder = false;
     localFolderChangeErrorMessage = '';
     setupFolderInspection = null;
+    applyExistingLibraryDefaults(null);
     setupPhotosDir = localLibraryPreview;
     setupPassword = '';
     setupPasswordConfirm = '';
@@ -561,6 +637,7 @@
       applyInitialSetupState(setupState);
       changingLocalFolder = false;
       setupFolderInspection = null;
+      applyExistingLibraryDefaults(null);
       setupPassword = '';
       setupPasswordConfirm = '';
       email = 'admin';
@@ -650,16 +727,33 @@
       return;
     }
 
+    const databaseToOpen = selectedExistingLibraryDb;
+    const userToOpen = selectedExistingLibraryUser;
+    if (!databaseToOpen || !userToOpen) {
+      const message = 'Choose a local database and user before opening the library.';
+      if (changingLocalFolder) {
+        localFolderChangeErrorMessage = message;
+      } else {
+        setupErrorMessage = message;
+      }
+      return;
+    }
+
     useExistingLibraryLoading = true;
     try {
       const setupState = (await invoke('use_existing_local_library', {
         photosDir: nextDir,
+        dbPath: databaseToOpen.path,
+        userName: userToOpen.user_name,
       })) as InitialSetupState;
       setupFolderInspection = null;
+      applyExistingLibraryDefaults(null);
       setupPassword = '';
       setupPasswordConfirm = '';
       applyInitialSetupState(setupState);
       changingLocalFolder = false;
+      email = userToOpen.user_name;
+      password = '';
       localFolderChangeSuccessMessage = 'Existing local library opened. Sign in with an account from that library.';
       await clearClientSession();
       if (needsLocalSetup) {
@@ -701,6 +795,7 @@
     localFolderChangeErrorMessage = '';
     localFolderChangeSuccessMessage = '';
     setupFolderInspection = null;
+    applyExistingLibraryDefaults(null);
   };
 
   let showSetupPassword = $state(false);
@@ -794,12 +889,12 @@
           </div>
 
           <div class="choice-grid">
-              <button
-                type="button"
-                class={`choice ${backendMode === 'local' ? 'active' : ''}`}
-                onclick={() => chooseBackend('local')}
-                disabled={!isDesktop || initialSetupLoading || loading || setupSaving}
-              >
+            <button
+              type="button"
+              class={`choice ${backendMode === 'local' ? 'active' : ''}`}
+              onclick={() => chooseBackend('local')}
+              disabled={!isDesktop || initialSetupLoading || loading || setupSaving}
+            >
               <div class="choice-head">
                 <div class="choice-title">This machine</div>
                 <div class="choice-check" aria-hidden="true"></div>
@@ -899,8 +994,8 @@
             </div>
             <p class="panel-note">
               {#if hasExistingLibraryInSelectedFolder}
-                Existing user library data was detected in this folder. Continue to sign in instead of creating a new
-                admin account.
+                Existing user library data was detected on this machine or in the selected folder. Choose a database and
+                user to continue.
               {:else}
                 Your admin account will be created inside the selected library folder.
               {/if}
@@ -925,6 +1020,7 @@
                   disabled={setupSaving || useExistingLibraryLoading}
                   oninput={() => {
                     setupFolderInspection = null;
+                    applyExistingLibraryDefaults(null);
                   }}
                   onblur={() => void refreshSetupFolderInspection()}
                 />
@@ -944,16 +1040,48 @@
               <div class="existing-library-warning">
                 <div class="existing-library-title">Existing local library data found</div>
                 <div class="existing-library-copy">
-                  This folder already contains <code>assets.db</code>. Lomod keeps its active database in AppData, but
-                  it will read the existing user database from this library folder and continue with those accounts.
+                  Choose which <code>assets.db</code> to open, then choose the user name to sign in with.
                 </div>
-                <div class="existing-library-paths">
-                  {#each existingLibraryDbPaths as dbPath (dbPath)}
-                    <div class="existing-library-path">
-                      <code>{summarizeDetectedLibraryPath(dbPath)}</code>
-                    </div>
+                <div class="existing-library-picker">
+                  {#each existingLibraryDatabases as database (database.path)}
+                    <button
+                      type="button"
+                      class:selected={database.path === selectedExistingLibraryDb?.path}
+                      class="existing-library-option"
+                      disabled={(database.user_count ?? database.users?.length ?? 0) === 0}
+                      onclick={() => selectExistingLibraryDatabase(database)}
+                    >
+                      <span class="existing-library-option-main">
+                        <span>{database.source ?? 'Local database'}</span>
+                        <code>{summarizeDetectedLibraryPath(database.path)}</code>
+                      </span>
+                      <span class="existing-library-option-meta">
+                        {#if database.load_error}
+                          Cannot read users
+                        {:else}
+                          {database.user_count ?? database.users?.length ?? 0} user{(database.user_count ??
+                            database.users?.length ??
+                            0) === 1
+                            ? ''
+                            : 's'}
+                        {/if}
+                      </span>
+                    </button>
                   {/each}
                 </div>
+                {#if selectedExistingLibraryDb}
+                  <label class="field">
+                    <span>User</span>
+                    <select class="field-input" bind:value={selectedExistingLibraryUserName}>
+                      {#each selectedExistingLibraryUsers as user (user.user_name)}
+                        <option value={user.user_name}>{existingLibraryUserLabel(user)}</option>
+                      {/each}
+                    </select>
+                    {#if selectedExistingLibraryUser}
+                      <div class="field-hint">Home: <code>{selectedExistingLibraryUser.home_dir}</code></div>
+                    {/if}
+                  </label>
+                {/if}
                 <div class="btn-row">
                   <button
                     type="button"
@@ -967,7 +1095,11 @@
                     type="button"
                     class="btn"
                     onclick={useExistingSelectedLibrary}
-                    disabled={setupFolderInspectionLoading || setupSaving || useExistingLibraryLoading}
+                    disabled={setupFolderInspectionLoading ||
+                      setupSaving ||
+                      useExistingLibraryLoading ||
+                      !selectedExistingLibraryDb ||
+                      !selectedExistingLibraryUser}
                   >
                     {useExistingLibraryLoading ? 'Opening library…' : 'Continue to sign in'}
                   </button>
@@ -1106,7 +1238,8 @@
             </div>
             <p class="panel-note">
               Choose an empty folder to create a new local library with a new admin password. If the folder already has
-              local library data, open it with that library's existing account instead.
+              local library data, or this machine has an existing Lomoware database, open it with that library's
+              existing account instead.
             </p>
           </div>
 
@@ -1128,6 +1261,7 @@
                   disabled={localFolderChangeSaving || useExistingLibraryLoading}
                   oninput={() => {
                     setupFolderInspection = null;
+                    applyExistingLibraryDefaults(null);
                     localFolderChangeErrorMessage = '';
                   }}
                   onblur={() => void refreshSetupFolderInspection()}
@@ -1150,16 +1284,48 @@
               <div class="existing-library-warning">
                 <div class="existing-library-title">Existing local library data found</div>
                 <div class="existing-library-copy">
-                  This folder contains <code>assets.db</code>. Open it only if you want the bundled
-                  <code>lomod</code> to use that local library and its existing accounts.
+                  Choose which <code>assets.db</code> this computer should use, then choose the user name to sign in with.
                 </div>
-                <div class="existing-library-paths">
-                  {#each existingLibraryDbPaths as dbPath (dbPath)}
-                    <div class="existing-library-path">
-                      <code>{summarizeDetectedLibraryPath(dbPath)}</code>
-                    </div>
+                <div class="existing-library-picker">
+                  {#each existingLibraryDatabases as database (database.path)}
+                    <button
+                      type="button"
+                      class:selected={database.path === selectedExistingLibraryDb?.path}
+                      class="existing-library-option"
+                      disabled={(database.user_count ?? database.users?.length ?? 0) === 0}
+                      onclick={() => selectExistingLibraryDatabase(database)}
+                    >
+                      <span class="existing-library-option-main">
+                        <span>{database.source ?? 'Local database'}</span>
+                        <code>{summarizeDetectedLibraryPath(database.path)}</code>
+                      </span>
+                      <span class="existing-library-option-meta">
+                        {#if database.load_error}
+                          Cannot read users
+                        {:else}
+                          {database.user_count ?? database.users?.length ?? 0} user{(database.user_count ??
+                            database.users?.length ??
+                            0) === 1
+                            ? ''
+                            : 's'}
+                        {/if}
+                      </span>
+                    </button>
                   {/each}
                 </div>
+                {#if selectedExistingLibraryDb}
+                  <label class="field">
+                    <span>User</span>
+                    <select class="field-input" bind:value={selectedExistingLibraryUserName}>
+                      {#each selectedExistingLibraryUsers as user (user.user_name)}
+                        <option value={user.user_name}>{existingLibraryUserLabel(user)}</option>
+                      {/each}
+                    </select>
+                    {#if selectedExistingLibraryUser}
+                      <div class="field-hint">Home: <code>{selectedExistingLibraryUser.home_dir}</code></div>
+                    {/if}
+                  </label>
+                {/if}
                 <div class="btn-row">
                   <button
                     type="button"
@@ -1173,7 +1339,11 @@
                     type="button"
                     class="btn"
                     onclick={useExistingSelectedLibrary}
-                    disabled={setupFolderInspectionLoading || localFolderChangeSaving || useExistingLibraryLoading}
+                    disabled={setupFolderInspectionLoading ||
+                      localFolderChangeSaving ||
+                      useExistingLibraryLoading ||
+                      !selectedExistingLibraryDb ||
+                      !selectedExistingLibraryUser}
                   >
                     {useExistingLibraryLoading ? 'Opening library…' : 'Open existing library'}
                   </button>
@@ -1822,6 +1992,59 @@
   .existing-library-path {
     font-size: 11.5px;
     color: var(--ink-700);
+  }
+  .existing-library-picker {
+    display: grid;
+    gap: 8px;
+  }
+  .existing-library-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1.5px solid rgba(224, 155, 58, 0.28);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.62);
+    color: var(--ink-700);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+  }
+  :global(.dark) .existing-library-option {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .existing-library-option:hover:not(:disabled),
+  .existing-library-option.selected {
+    border-color: var(--brand);
+    background: var(--brand-tint);
+  }
+  .existing-library-option:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+  }
+  .existing-library-option-main {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .existing-library-option-main code {
+    width: fit-content;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--brand);
+  }
+  .existing-library-option-meta {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--ink-500);
+    white-space: nowrap;
   }
 
   .fields {
