@@ -3,7 +3,6 @@
   import ChangePinCodeSettings from '$lib/components/user-settings-page/PinCodeSettings.svelte';
   import DownloadSettings from '$lib/components/user-settings-page/download-settings.svelte';
   import FeatureSettings from '$lib/components/user-settings-page/feature-settings.svelte';
-  import NotificationsSettings from '$lib/components/user-settings-page/notifications-settings.svelte';
   import UserUsageStatistic from '$lib/components/user-settings-page/user-usage-statistic.svelte';
   import MobileUploadSettings from '$lib/components/user-settings-page/mobile-upload-settings.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
@@ -15,7 +14,6 @@
     mdiAccountGroupOutline,
     mdiAccountOutline,
     mdiApi,
-    mdiBellOutline,
     mdiCellphoneArrowDownVariant,
     mdiCogOutline,
     mdiDevices,
@@ -112,15 +110,6 @@
     <FeatureSettings />
   </SettingAccordion>
 
-  <SettingAccordion
-    icon={mdiBellOutline}
-    key={OpenQueryParam.NOTIFICATIONS}
-    title={$t('notifications')}
-    subtitle={$t('notifications_setting_description')}
-  >
-    <NotificationsSettings />
-  </SettingAccordion>
-
   {#if featureFlagsManager.value.oauth}
     <SettingAccordion
       icon={mdiTwoFactorAuthentication}
@@ -160,5 +149,4 @@
   >
     <ChangePinCodeSettings />
   </SettingAccordion>
-
 </SettingAccordionState>
