@@ -2,7 +2,6 @@
   import { goto } from '$app/navigation';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import type { OnAction, PreAction } from '$lib/components/asset-viewer/actions/action';
-  import AddToStackAction from '$lib/components/asset-viewer/actions/add-to-stack-action.svelte';
   import ArchiveAction from '$lib/components/asset-viewer/actions/archive-action.svelte';
   import DeleteAction from '$lib/components/asset-viewer/actions/delete-action.svelte';
   import KeepThisDeleteOthersAction from '$lib/components/asset-viewer/actions/keep-this-delete-others.svelte';
@@ -11,7 +10,6 @@
   import RestoreAction from '$lib/components/asset-viewer/actions/restore-action.svelte';
   import SetAlbumCoverAction from '$lib/components/asset-viewer/actions/set-album-cover-action.svelte';
   import SetFeaturedPhotoAction from '$lib/components/asset-viewer/actions/set-person-featured-action.svelte';
-  import SetProfilePictureAction from '$lib/components/asset-viewer/actions/set-profile-picture-action.svelte';
   import SetStackPrimaryAsset from '$lib/components/asset-viewer/actions/set-stack-primary-asset.svelte';
   import SetVisibilityAction from '$lib/components/asset-viewer/actions/set-visibility-action.svelte';
   import UnstackAction from '$lib/components/asset-viewer/actions/unstack-action.svelte';
@@ -94,10 +92,19 @@
   });
 
   const Actions = $derived(getAssetActions($t, asset));
+  const commandPaletteActions = $derived(
+    withoutIcons([
+      Close,
+      Cast,
+      ...Object.entries(Actions)
+        .filter(([key]) => key !== 'Share' && key !== 'Edit')
+        .map(([, action]) => action),
+    ]),
+  );
   const sharedLink = getSharedLink();
 </script>
 
-<CommandPaletteDefaultProvider name={$t('assets')} actions={withoutIcons([Close, Cast, ...Object.values(Actions)])} />
+<CommandPaletteDefaultProvider name={$t('assets')} actions={commandPaletteActions} />
 
 <div
   class="flex h-16 place-items-center justify-between bg-linear-to-b from-black/40 px-3 transition-transform duration-200"
@@ -117,7 +124,6 @@
       </Tooltip>
     {/if}
     <ActionButton action={Cast} />
-    <ActionButton action={Actions.Share} />
     <ActionButton action={Actions.Offline} />
     <ActionButton action={Actions.PlayMotionPhoto} />
     <ActionButton action={Actions.StopMotionPhoto} />
@@ -132,8 +138,6 @@
     {#if isOwner}
       <RatingAction {asset} {onAction} />
     {/if}
-
-    <ActionButton action={Actions.Edit} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
@@ -155,7 +159,6 @@
         <ActionMenuItem action={Actions.AddToAlbum} />
 
         {#if isOwner}
-          <AddToStackAction {asset} {stack} {onAction} />
           {#if stack}
             <UnstackAction {stack} {onAction} />
             <KeepThisDeleteOthersAction {stack} {asset} {onAction} />
@@ -172,9 +175,6 @@
         {/if}
         {#if person}
           <SetFeaturedPhotoAction {asset} {person} {onAction} />
-        {/if}
-        {#if asset.type === AssetTypeEnum.Image && !isLocked}
-          <SetProfilePictureAction {asset} />
         {/if}
 
         {#if !isLocked}
