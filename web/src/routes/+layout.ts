@@ -27,7 +27,7 @@ export const load = (async ({ fetch, url }) => {
   return {
     error,
     meta: {
-      title: 'Lomo Photo Viewer',
+      title: 'lomorage',
     },
   };
 }) satisfies LayoutLoad;

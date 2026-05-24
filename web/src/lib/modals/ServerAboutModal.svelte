@@ -18,7 +18,7 @@
 <Modal title={$t('about')} {onClose}>
   <ModalBody>
     <div class="flex flex-col sm:grid sm:grid-cols-2 gap-4">
-      <ServerAboutItem id="lomo-photo-viewer" title="Lomo Photo Viewer" version={info.version} />
+      <ServerAboutItem id="lomo-photo-viewer" title="lomorage" version={info.version} />
       <ServerAboutItem id="exif" title="ExifTool" version={info.exiftool} />
       <ServerAboutItem id="nodejs" title="Node.js" version={info.nodejs} />
       <ServerAboutItem id="libvips" title="Libvips" version={info.libvips} />

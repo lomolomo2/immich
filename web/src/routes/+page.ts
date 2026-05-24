@@ -39,7 +39,7 @@ export const load = (async ({ fetch }) => {
   return {
     meta: {
       title: $t('welcome') + ' 🎉',
-      description: 'Browse your photo library with Lomo Photo Viewer.',
+      description: 'Browse your photo library with lomorage.',
     },
   };
 }) satisfies PageLoad;

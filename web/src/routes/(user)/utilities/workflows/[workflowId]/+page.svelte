@@ -356,7 +356,7 @@
 {/snippet}
 
 <svelte:head>
-  <title>{data.meta.title} - Lomo Photo Viewer</title>
+  <title>{data.meta.title} - lomorage</title>
 </svelte:head>
 
 <main class="pt-24 immich-scrollbar">

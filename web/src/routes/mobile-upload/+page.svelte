@@ -173,14 +173,14 @@
 </script>
 
 <svelte:head>
-  <title>Mobile Upload - Lomo Photo Viewer</title>
+  <title>Mobile Upload - lomorage</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 </svelte:head>
 
 <main class="min-h-screen bg-[#f7f7f4] text-[#172033]">
   <div class="mx-auto flex min-h-screen w-full max-w-xl flex-col px-5 py-8">
     <header class="mb-8">
-      <div class="text-sm font-semibold uppercase tracking-wider text-[#59718a]">Lomo Photo Viewer</div>
+      <div class="text-sm font-semibold uppercase tracking-wider text-[#59718a]">lomorage</div>
       <h1 class="mt-2 text-3xl font-semibold">Mobile Upload</h1>
       {#if configuredServerUrl}
         <div class="mt-3 break-all text-sm text-[#59718a]">Backend: {configuredServerUrl}</div>

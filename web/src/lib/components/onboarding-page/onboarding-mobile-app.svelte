@@ -1,1 +1,1 @@
-<p>Mobile upload is available from the Lomo Photo Viewer toolbar after setup.</p>
+<p>Mobile upload is available from the lomorage toolbar after setup.</p>
