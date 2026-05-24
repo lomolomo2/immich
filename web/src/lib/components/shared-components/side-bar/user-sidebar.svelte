@@ -25,8 +25,6 @@
     mdiMap,
     mdiMapOutline,
     mdiTagMultipleOutline,
-    mdiToolbox,
-    mdiToolboxOutline,
     mdiTrashCan,
     mdiTrashCanOutline,
   } from '@mdi/js';
@@ -77,8 +75,6 @@
   {#if $preferences.folders.enabled && $preferences.folders.sidebarWeb}
     <NavbarItem title={$t('folders')} href={Route.folders()} icon={{ icon: mdiFolderOutline, flipped: true }} />
   {/if}
-
-  <NavbarItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
 
   <NavbarItem
     title={$t('archive')}

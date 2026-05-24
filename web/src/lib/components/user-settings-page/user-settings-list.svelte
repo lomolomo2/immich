@@ -2,26 +2,18 @@
   import { page } from '$app/stores';
   import ChangePinCodeSettings from '$lib/components/user-settings-page/PinCodeSettings.svelte';
   import DownloadSettings from '$lib/components/user-settings-page/download-settings.svelte';
-  import FeatureSettings from '$lib/components/user-settings-page/feature-settings.svelte';
-  import UserUsageStatistic from '$lib/components/user-settings-page/user-usage-statistic.svelte';
   import MobileUploadSettings from '$lib/components/user-settings-page/mobile-upload-settings.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { user } from '$lib/stores/user.store';
   import { oauth } from '$lib/utils';
-  import { type ApiKeyResponseDto, type SessionResponseDto } from '@immich/sdk';
   import {
-    mdiAccountGroupOutline,
     mdiAccountOutline,
-    mdiApi,
     mdiCellphoneArrowDownVariant,
     mdiCogOutline,
-    mdiDevices,
     mdiDownload,
-    mdiFeatureSearchOutline,
     mdiFormTextboxPassword,
     mdiLockSmart,
-    mdiServerOutline,
     mdiTwoFactorAuthentication,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -29,18 +21,8 @@
   import SettingAccordion from '../shared-components/settings/setting-accordion.svelte';
   import AppSettings from './app-settings.svelte';
   import ChangePasswordSettings from './change-password-settings.svelte';
-  import DeviceList from './device-list.svelte';
   import OAuthSettings from './oauth-settings.svelte';
-  import PartnerSettings from './partner-settings.svelte';
-  import UserAPIKeyList from './user-api-key-list.svelte';
   import UserProfileSettings from './user-profile-settings.svelte';
-
-  interface Props {
-    keys?: ApiKeyResponseDto[];
-    sessions?: SessionResponseDto[];
-  }
-
-  let { keys = $bindable([]), sessions = $bindable([]) }: Props = $props();
 
   let oauthOpen =
     oauth.isCallback(globalThis.location) ||
@@ -71,43 +53,12 @@
   </SettingAccordion>
 
   <SettingAccordion
-    icon={mdiServerOutline}
-    key="user-usage-info"
-    title={$t('user_usage_stats')}
-    subtitle={$t('user_usage_stats_description')}
-  >
-    <UserUsageStatistic />
-  </SettingAccordion>
-
-  <SettingAccordion icon={mdiApi} key="api-keys" title={$t('api_keys')} subtitle={$t('manage_your_api_keys')}>
-    <UserAPIKeyList bind:keys />
-  </SettingAccordion>
-
-  <SettingAccordion
-    icon={mdiDevices}
-    key="authorized-devices"
-    title={$t('authorized_devices')}
-    subtitle={$t('manage_your_devices')}
-  >
-    <DeviceList bind:devices={sessions} />
-  </SettingAccordion>
-
-  <SettingAccordion
     icon={mdiDownload}
     key="download-settings"
     title={$t('download_settings')}
     subtitle={$t('download_settings_description')}
   >
     <DownloadSettings />
-  </SettingAccordion>
-
-  <SettingAccordion
-    icon={mdiFeatureSearchOutline}
-    key="feature"
-    title={$t('features')}
-    subtitle={$t('features_setting_description')}
-  >
-    <FeatureSettings />
   </SettingAccordion>
 
   {#if featureFlagsManager.value.oauth}
@@ -129,15 +80,6 @@
     subtitle={$t('change_your_password')}
   >
     <ChangePasswordSettings />
-  </SettingAccordion>
-
-  <SettingAccordion
-    icon={mdiAccountGroupOutline}
-    key="partner-sharing"
-    title={$t('partner_sharing')}
-    subtitle={$t('manage_sharing_with_partners')}
-  >
-    <PartnerSettings user={$user} />
   </SettingAccordion>
 
   <SettingAccordion
