@@ -69,6 +69,7 @@
   const REMOTE_SERVER_ADDRESS_STORAGE_KEY = 'lomo_remote_server_address';
   const REMOTE_SERVER_PORT_STORAGE_KEY = 'lomo_remote_server_port';
   const SHOW_CHOOSER_QUERY_PARAM = 'showChooser';
+  const LOMO_BACKEND_PORT = '8000';
 
   let { data }: Props = $props();
 
@@ -102,8 +103,15 @@
   let localFolderChangeSuccessMessage = $state('');
   let configuredRemoteLomodUrl = $state('');
   let chooserWasRequested = $state(false);
+  let browserBackendUrl = $state('');
 
-  const buildServerUrl = (address: string, port: string) => `http://${address.trim()}:${port.trim() || '8000'}`;
+  const buildServerUrl = (address: string, port: string) =>
+    `http://${address.trim()}:${port.trim() || LOMO_BACKEND_PORT}`;
+  const hostForUrl = (host: string) => (host.includes(':') && !host.startsWith('[') ? `[${host}]` : host);
+  const buildBrowserBackendUrl = () => {
+    const host = globalThis.location?.hostname?.trim() || 'localhost';
+    return `http://${hostForUrl(host)}:${LOMO_BACKEND_PORT}`;
+  };
   const DESKTOP_SETUP_STATE_TIMEOUT_MS = 2500;
   const fallbackFeatureFlags = { passwordLogin: true, oauth: false, oauthAutoLaunch: false };
 
@@ -144,6 +152,7 @@
       !useExistingLibraryLoading &&
       !(setupFolderInspection?.has_existing_user_db ?? false),
   );
+  const browserUsesCurrentHostBackend = $derived(!isDesktop && Boolean(browserBackendUrl));
 
   const LOADING_STAGES = ['Starting lomod…', 'Initializing local library', 'Checking setup status', 'Ready'];
   let loadingProgress = $state(4);
@@ -199,13 +208,13 @@
       return undefined;
     }
 
-    const port = globalThis.localStorage?.getItem(REMOTE_SERVER_PORT_STORAGE_KEY)?.trim() || '8000';
+    const port = globalThis.localStorage?.getItem(REMOTE_SERVER_PORT_STORAGE_KEY)?.trim() || LOMO_BACKEND_PORT;
     return buildServerUrl(address, port);
   };
 
   const saveRemoteServerToStorage = (address: string, port: string) => {
     globalThis.localStorage?.setItem(REMOTE_SERVER_ADDRESS_STORAGE_KEY, address.trim());
-    globalThis.localStorage?.setItem(REMOTE_SERVER_PORT_STORAGE_KEY, port.trim() || '8000');
+    globalThis.localStorage?.setItem(REMOTE_SERVER_PORT_STORAGE_KEY, port.trim() || LOMO_BACKEND_PORT);
   };
 
   const hasSessionCookies = (): boolean => {
@@ -241,7 +250,7 @@
     }
 
     serverAddress = '';
-    serverPort = '8000';
+    serverPort = LOMO_BACKEND_PORT;
   };
 
   const normalizeFolderPath = (value: string) => value.trim().replace(/[\\/]+$/, '');
@@ -372,9 +381,12 @@
     setupStateWarning = '';
 
     if (!invoke) {
+      browserBackendUrl = buildBrowserBackendUrl();
+      serverAddress = globalThis.location?.hostname?.trim() || 'localhost';
+      serverPort = LOMO_BACKEND_PORT;
       backendMode = 'remote';
-      chooserWasRequested = true;
-      initialBackendChoiceMade = false;
+      chooserWasRequested = false;
+      initialBackendChoiceMade = true;
       initialSetupLoading = false;
       return;
     }
@@ -428,6 +440,12 @@
   const applyShowChooserRequest = () => {
     const url = new URL(globalThis.location.href);
     if (url.searchParams.get(SHOW_CHOOSER_QUERY_PARAM) !== '1') {
+      return;
+    }
+
+    if (browserUsesCurrentHostBackend) {
+      url.searchParams.delete(SHOW_CHOOSER_QUERY_PARAM);
+      globalThis.history.replaceState(globalThis.history.state, '', `${url.pathname}${url.search}${url.hash}`);
       return;
     }
 
@@ -521,13 +539,16 @@
       const loginPassword = credentials?.password ?? password;
 
       // Set custom header so proxy knows which lomo-backend to use
-      const lomoServerUrl =
-        backendMode === 'remote' || !isDesktop ? buildServerUrl(serverAddress, serverPort) : 'http://localhost:8000';
+      const lomoServerUrl = browserUsesCurrentHostBackend
+        ? browserBackendUrl
+        : backendMode === 'remote' || !isDesktop
+          ? buildServerUrl(serverAddress, serverPort)
+          : `http://localhost:${LOMO_BACKEND_PORT}`;
       defaults.headers = { ...defaults.headers, 'X-Lomo-Server': lomoServerUrl };
 
       const user = await login({ loginCredentialDto: { email: loginEmail, password: loginPassword } });
 
-      if (backendMode === 'remote' || !isDesktop) {
+      if ((backendMode === 'remote' || !isDesktop) && !browserUsesCurrentHostBackend) {
         saveRemoteServerToStorage(serverAddress, serverPort);
       }
 
@@ -802,7 +823,7 @@
   let showLoginPassword = $state(false);
 
   const showChooser = $derived(!initialBackendChoiceMade);
-  const showServerTargetFields = $derived(!isDesktop || backendMode === 'remote');
+  const showServerTargetFields = $derived(!browserUsesCurrentHostBackend && (!isDesktop || backendMode === 'remote'));
   const canSubmitLogin = $derived(
     Boolean(email.trim()) &&
       Boolean(password) &&
@@ -810,6 +831,16 @@
       !loading,
   );
   const remoteTargetPreview = $derived.by(() => `http://${serverAddress.trim() || '—'}:${serverPort.trim() || '—'}`);
+  const signInTargetPreview = $derived.by(() =>
+    browserUsesCurrentHostBackend
+      ? browserBackendUrl
+      : showServerTargetFields
+        ? remoteTargetPreview
+        : `http://localhost:${LOMO_BACKEND_PORT}`,
+  );
+  const signInModeLabel = $derived.by(() =>
+    browserUsesCurrentHostBackend ? 'Browser host' : showServerTargetFields ? 'Remote server' : 'This machine',
+  );
   const localLibraryPreview = $derived(
     setupPhotosDir.trim() || 'C:\\Users\\<user>\\AppData\\Roaming\\com.lomoware.photoviewer\\photos',
   );
@@ -1461,22 +1492,24 @@
               <div class="panel-grid">
                 <div class="panel-row">
                   <div class="panel-label">Mode</div>
-                  <div class="panel-value">{showServerTargetFields ? 'Remote server' : 'This machine'}</div>
+                  <div class="panel-value">{signInModeLabel}</div>
                 </div>
                 <div class="panel-row">
                   <div class="panel-label">Sign-in target</div>
                   <div class="panel-value mono">
-                    {showServerTargetFields ? remoteTargetPreview : 'http://localhost:8000'}
+                    {signInTargetPreview}
                   </div>
                 </div>
-                {#if !showServerTargetFields}
+                {#if !showServerTargetFields && !browserUsesCurrentHostBackend}
                   <div class="panel-row full">
                     <div class="panel-label">Local library root</div>
                     <div class="panel-value mono">{localLibraryPreview}</div>
                   </div>
                 {/if}
               </div>
-              {#if showServerTargetFields}
+              {#if browserUsesCurrentHostBackend}
+                <p class="panel-note">Browser sign-in uses the backend on the same host as the page you opened.</p>
+              {:else if showServerTargetFields}
                 <p class="panel-note">
                   The remote address is remembered separately from your local desktop storage settings.
                 </p>
