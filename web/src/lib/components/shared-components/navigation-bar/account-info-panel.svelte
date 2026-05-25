@@ -5,10 +5,29 @@
   import { Route } from '$lib/route';
   import { user } from '$lib/stores/user.store';
   import { Button, Icon, IconButton, modalManager } from '@immich/ui';
-  import { mdiCog, mdiLogout, mdiPencil, mdiWrench } from '@mdi/js';
+  import {
+    mdiBookOpenPageVariantOutline,
+    mdiCog,
+    mdiHelpCircleOutline,
+    mdiLogout,
+    mdiPencil,
+    mdiWrench,
+  } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
   import UserAvatar from '../user-avatar.svelte';
+
+  type TauriInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+  type TauriGlobals = {
+    __TAURI__?: {
+      core?: {
+        invoke?: TauriInvoke;
+      };
+    };
+    __TAURI_INTERNALS__?: {
+      invoke?: TauriInvoke;
+    };
+  };
 
   interface Props {
     onLogout: () => void;
@@ -16,6 +35,26 @@
   }
 
   let { onLogout, onClose = () => {} }: Props = $props();
+
+  const getTauriInvoke = (): TauriInvoke | null => {
+    const globals = globalThis as TauriGlobals;
+    return globals.__TAURI__?.core?.invoke ?? globals.__TAURI_INTERNALS__?.invoke ?? null;
+  };
+
+  const openWelcomePage = async () => {
+    onClose();
+    const invoke = getTauriInvoke();
+    if (!invoke) {
+      console.warn('Welcome page is only available in the desktop app');
+      return;
+    }
+
+    try {
+      await invoke('show_welcome_page');
+    } catch (error) {
+      console.error('Failed to open welcome page', error);
+    }
+  };
 </script>
 
 <div
@@ -29,28 +68,28 @@
     class="mx-4 mt-4 flex flex-col items-center justify-center gap-4 rounded-t-3xl bg-white p-4 dark:bg-immich-dark-primary/10"
   >
     {#if $user}
-    <div class="relative">
-      <UserAvatar user={$user} size="xl" />
-      <div class="absolute bottom-0 end-0 rounded-full w-6 h-6">
-        <IconButton
-          color="primary"
-          icon={mdiPencil}
-          aria-label={$t('edit_avatar')}
-          size="tiny"
-          shape="round"
-          onclick={async () => {
-            onClose();
-            await modalManager.show(AvatarEditModal);
-          }}
-        />
+      <div class="relative">
+        <UserAvatar user={$user} size="xl" />
+        <div class="absolute bottom-0 end-0 rounded-full w-6 h-6">
+          <IconButton
+            color="primary"
+            icon={mdiPencil}
+            aria-label={$t('edit_avatar')}
+            size="tiny"
+            shape="round"
+            onclick={async () => {
+              onClose();
+              await modalManager.show(AvatarEditModal);
+            }}
+          />
+        </div>
       </div>
-    </div>
-    <div>
-      <p class="text-center text-lg font-medium text-primary">
-        {$user.name}
-      </p>
-      <p class="text-sm text-gray-500 dark:text-immich-dark-fg">{$user.email}</p>
-    </div>
+      <div>
+        <p class="text-center text-lg font-medium text-primary">
+          {$user.name}
+        </p>
+        <p class="text-sm text-gray-500 dark:text-immich-dark-fg">{$user.email}</p>
+      </div>
     {/if}
 
     <div class="flex flex-col gap-1">
@@ -85,6 +124,28 @@
           </div>
         </Button>
       {/if}
+
+      <div class="mt-2 border-t border-gray-300 pt-2 dark:border-immich-dark-gray">
+        <div
+          class="mb-1 flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300"
+        >
+          <Icon icon={mdiHelpCircleOutline} size="15" aria-hidden />
+          Help
+        </div>
+        <Button
+          onclick={openWelcomePage}
+          shape="round"
+          variant="ghost"
+          size="small"
+          color="secondary"
+          class="border dark:border-immich-dark-gray dark:bg-gray-500 dark:hover:bg-immich-dark-primary/50 hover:bg-immich-primary/10 dark:text-white"
+        >
+          <div class="flex place-content-center place-items-center text-center gap-2 px-2">
+            <Icon icon={mdiBookOpenPageVariantOutline} size="18" aria-hidden />
+            View Welcome Page
+          </div>
+        </Button>
+      </div>
     </div>
   </div>
 
@@ -96,6 +157,5 @@
       variant="ghost"
       color="secondary">{$t('sign_out')}</Button
     >
-
   </div>
 </div>
