@@ -3,6 +3,7 @@
   import Image from '$lib/components/Image.svelte';
   import { Icon } from '@immich/ui';
   import { mdiEyeOffOutline } from '@mdi/js';
+  import { onDestroy } from 'svelte';
   import type { ClassValue } from 'svelte/elements';
 
   interface Props {
@@ -43,6 +44,35 @@
 
   let loaded = $state(false);
   let errored = $state(false);
+  let imageElement: HTMLElement | undefined = $state();
+  let isNearViewport = $state(preload);
+  let intersectionObserver: IntersectionObserver | undefined;
+
+  const resetIntersectionObserver = () => {
+    intersectionObserver?.disconnect();
+    intersectionObserver = undefined;
+
+    if (preload || !imageElement || loaded || errored) {
+      return;
+    }
+
+    intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        isNearViewport = entry.isIntersecting;
+      },
+      { rootMargin: '200px' },
+    );
+    intersectionObserver.observe(imageElement);
+  };
+
+  $effect(() => {
+    isNearViewport ||= preload;
+    resetIntersectionObserver();
+  });
+
+  onDestroy(() => {
+    intersectionObserver?.disconnect();
+  });
 
   const setLoaded = () => {
     loaded = true;
@@ -65,12 +95,21 @@
   let style = $derived(
     `width: ${widthStyle}; height: ${heightStyle ?? ''}; filter: ${hidden ? 'grayscale(50%)' : 'none'}; opacity: ${hidden ? '0.5' : '1'};`,
   );
+
+  let shouldRenderImage = $derived(preload || isNearViewport || loaded || errored);
 </script>
 
 {#if errored}
   <BrokenAsset class={[sharedClasses, brokenAssetClass]} width={widthStyle} height={heightStyle} />
+{:else if !shouldRenderImage}
+  <div
+    bind:this={imageElement}
+    class={['object-cover bg-gray-300 dark:bg-gray-700', sharedClasses, imageClass]}
+    {style}
+  ></div>
 {:else}
   <Image
+    ref={imageElement}
     src={url}
     onLoad={setLoaded}
     onError={setErrored}

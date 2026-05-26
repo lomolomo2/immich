@@ -255,6 +255,7 @@
         widthStyle="{width}px"
         heightStyle="{height}px"
         curve={selected}
+        preload={false}
         onComplete={(errored) => ((loaded = true), (thumbError = errored))}
       />
       {#if asset.isVideo}
