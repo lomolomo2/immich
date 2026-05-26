@@ -10,8 +10,6 @@
   import {
     mdiAccount,
     mdiAccountOutline,
-    mdiArchiveArrowDown,
-    mdiArchiveArrowDownOutline,
     mdiFolderOutline,
     mdiHeart,
     mdiHeartOutline,
@@ -75,13 +73,6 @@
   {#if $preferences.folders.enabled && $preferences.folders.sidebarWeb}
     <NavbarItem title={$t('folders')} href={Route.folders()} icon={{ icon: mdiFolderOutline, flipped: true }} />
   {/if}
-
-  <NavbarItem
-    title={$t('archive')}
-    href={Route.archive()}
-    icon={mdiArchiveArrowDownOutline}
-    activeIcon={mdiArchiveArrowDown}
-  />
 
   <NavbarItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
 
