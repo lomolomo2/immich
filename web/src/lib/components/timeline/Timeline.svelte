@@ -22,6 +22,7 @@
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import { getTimes, type ScrubberListener } from '$lib/utils/timeline-util';
+  import { LoadingSpinner } from '@immich/ui';
   import { type AlbumResponseDto, type PersonResponseDto, type UserResponseDto } from '@immich/sdk';
   import { DateTime } from 'luxon';
   import { onDestroy, onMount, tick, type Snippet } from 'svelte';
@@ -104,6 +105,20 @@
   let scrubberWidth = $state(0);
 
   const isEmpty = $derived(timelineManager.isInitialized && timelineManager.months.length === 0);
+  const hasVisibleUnloadedMonth = $derived.by(() => {
+    if (!timelineManager.isInitialized || timelineManager.viewportHeight === 0) {
+      return false;
+    }
+
+    const visibleTop = timelineManager.visibleWindow.top;
+    const visibleBottom = timelineManager.visibleWindow.bottom;
+    return timelineManager.months.some(
+      (monthGroup) =>
+        !monthGroup.isLoaded &&
+        isIntersecting(monthGroup.top, monthGroup.top + monthGroup.height, visibleTop, visibleBottom),
+    );
+  });
+  const showTimelineLoadingSpinner = $derived(timelineManager.initTask.loading || hasVisibleUnloadedMonth);
   const maxMd = $derived(mediaQueryManager.maxMd);
   const usingMobileDevice = $derived(mediaQueryManager.pointerCoarse);
 
@@ -624,6 +639,19 @@
   bind:this={scrollableElement}
   onscroll={() => (handleTimelineScroll(), timelineManager.updateSlidingWindow(), updateIsScrolling())}
 >
+  {#if showTimelineLoadingSpinner}
+    <div
+      class="pointer-events-none sticky top-0 z-20 flex items-center justify-center"
+      style:height={timelineManager.viewportHeight + 'px'}
+      style:margin-bottom={-timelineManager.viewportHeight + 'px'}
+      aria-live="polite"
+    >
+      <div class="rounded-full bg-white/80 p-5 shadow-lg backdrop-blur-sm dark:bg-black/50">
+        <LoadingSpinner size="giant" />
+      </div>
+    </div>
+  {/if}
+
   <section
     bind:this={timelineElement}
     id="virtual-timeline"
