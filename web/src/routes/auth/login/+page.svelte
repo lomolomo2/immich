@@ -373,8 +373,10 @@
       return normalizedPath.slice(basePrefix.length);
     }
 
-    const segments = normalizedPath.split('\\').filter(Boolean);
-    return segments.slice(-2).join('\\') || normalizedPath;
+    // Databases outside the selected folder (e.g. the Default Lomoware / Current runtime
+    // databases) share a relative tail like "var\assets.db", so show the full path to
+    // keep them distinguishable.
+    return normalizedPath;
   };
 
   const selectExistingLibraryDatabase = (database: LocalLibraryDbCandidate) => {
