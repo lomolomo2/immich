@@ -61,6 +61,7 @@
   type LocalLibraryDbCandidate = {
     path: string;
     source?: string;
+    in_selected_folder?: boolean;
     users?: LocalLibraryDbUser[];
     user_count?: number;
     load_error?: string | null;
@@ -95,6 +96,7 @@
   let setupFolderInspection = $state<LocalLibraryInspection | null>(null);
   let selectedExistingLibraryDbPath = $state('');
   let selectedExistingLibraryUserName = $state('');
+  let showOtherLibraries = $state(false);
   let setupFolderInspectionLoading = $state(false);
   let useExistingLibraryLoading = $state(false);
   let changingLocalFolder = $state(false);
@@ -198,9 +200,25 @@
       selectedExistingLibraryUsers[0] ??
       null,
   );
-  const hasExistingLibraryInSelectedFolder = $derived(
-    (setupFolderInspection?.has_existing_user_db ?? false) || availableExistingLibraryDatabases.length > 0,
+  // A library that physically lives in the selected folder. Only this blocks creating a new
+  // library there; global/runtime DBs stay available to adopt but do not gate the create form.
+  const folderHasOwnLibrary = $derived(
+    (setupFolderInspection?.has_existing_user_db ?? false) ||
+      availableExistingLibraryDatabases.some((database) => database.in_selected_folder),
   );
+  const hasAdoptableLibrary = $derived(availableExistingLibraryDatabases.length > 0);
+  const existingLibraryPickerTitle = $derived(
+    folderHasOwnLibrary ? 'Existing local library data found' : 'Other libraries on this machine (optional)',
+  );
+  const existingLibraryPickerCopy = $derived(
+    folderHasOwnLibrary
+      ? 'Choose which assets.db this computer should use, then choose the user name to sign in with.'
+      : 'This folder has no library yet. Create a new one below, or open an existing library from this machine.',
+  );
+  // The optional "adopt" section (shown alongside the create form) collapses by default so the
+  // create-a-new-library flow stays primary. The in-folder library picker is never collapsed.
+  const otherLibrariesCollapsible = $derived(!folderHasOwnLibrary);
+  const otherLibrariesExpanded = $derived(folderHasOwnLibrary || showOtherLibraries);
 
   const getStoredRemoteServerUrl = (): string | undefined => {
     const address = globalThis.localStorage?.getItem(REMOTE_SERVER_ADDRESS_STORAGE_KEY)?.trim();
@@ -255,7 +273,7 @@
 
   const normalizeFolderPath = (value: string) => value.trim().replace(/[\\/]+$/, '');
 
-  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+  async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
@@ -268,7 +286,7 @@
         clearTimeout(timeoutId);
       }
     }
-  };
+  }
 
   const loadInitialSetupStateFromProxy = async (): Promise<InitialSetupState> => {
     const response = await fetch('/api/lomo/settings', { cache: 'no-store' });
@@ -312,7 +330,9 @@
     const databases = inspection?.existing_library_databases ?? [];
     const databasesWithUsers = databases.filter((database) => (database.user_count ?? database.users?.length ?? 0) > 0);
     const currentDatabase = databasesWithUsers.find((database) => database.path === selectedExistingLibraryDbPath);
-    const nextDatabase = currentDatabase ?? databasesWithUsers[0];
+    // Prefer a library that lives inside the selected folder over global/runtime databases.
+    const folderDatabase = databasesWithUsers.find((database) => database.in_selected_folder);
+    const nextDatabase = currentDatabase ?? folderDatabase ?? databasesWithUsers[0];
     selectedExistingLibraryDbPath = nextDatabase?.path ?? '';
 
     const users = nextDatabase?.users ?? [];
@@ -1024,9 +1044,10 @@
               </div>
             </div>
             <p class="panel-note">
-              {#if hasExistingLibraryInSelectedFolder}
-                Existing user library data was detected on this machine or in the selected folder. Choose a database and
-                user to continue.
+              {#if folderHasOwnLibrary}
+                Existing library data was found in the selected folder. Choose a database and user to continue.
+              {:else if hasAdoptableLibrary}
+                This folder has no library yet. Create one below, or open an existing library from this machine.
               {:else}
                 Your admin account will be created inside the selected library folder.
               {/if}
@@ -1067,76 +1088,7 @@
               <div class="field-hint">Admin home: <code>{setupAdminPath}</code></div>
             </label>
 
-            {#if hasExistingLibraryInSelectedFolder}
-              <div class="existing-library-warning">
-                <div class="existing-library-title">Existing local library data found</div>
-                <div class="existing-library-copy">
-                  Choose which <code>assets.db</code> to open, then choose the user name to sign in with.
-                </div>
-                <div class="existing-library-picker">
-                  {#each existingLibraryDatabases as database (database.path)}
-                    <button
-                      type="button"
-                      class:selected={database.path === selectedExistingLibraryDb?.path}
-                      class="existing-library-option"
-                      disabled={(database.user_count ?? database.users?.length ?? 0) === 0}
-                      onclick={() => selectExistingLibraryDatabase(database)}
-                    >
-                      <span class="existing-library-option-main">
-                        <span>{database.source ?? 'Local database'}</span>
-                        <code>{summarizeDetectedLibraryPath(database.path)}</code>
-                      </span>
-                      <span class="existing-library-option-meta">
-                        {#if database.load_error}
-                          Cannot read users
-                        {:else}
-                          {database.user_count ?? database.users?.length ?? 0} user{(database.user_count ??
-                            database.users?.length ??
-                            0) === 1
-                            ? ''
-                            : 's'}
-                        {/if}
-                      </span>
-                    </button>
-                  {/each}
-                </div>
-                {#if selectedExistingLibraryDb}
-                  <label class="field">
-                    <span>User</span>
-                    <select class="field-input" bind:value={selectedExistingLibraryUserName}>
-                      {#each selectedExistingLibraryUsers as user (user.user_name)}
-                        <option value={user.user_name}>{existingLibraryUserLabel(user)}</option>
-                      {/each}
-                    </select>
-                    {#if selectedExistingLibraryUser}
-                      <div class="field-hint">Home: <code>{selectedExistingLibraryUser.home_dir}</code></div>
-                    {/if}
-                  </label>
-                {/if}
-                <div class="btn-row">
-                  <button
-                    type="button"
-                    class="btn secondary"
-                    onclick={browseForSetupFolder}
-                    disabled={!isDesktop || setupSaving || useExistingLibraryLoading}
-                  >
-                    Choose another folder
-                  </button>
-                  <button
-                    type="button"
-                    class="btn"
-                    onclick={useExistingSelectedLibrary}
-                    disabled={setupFolderInspectionLoading ||
-                      setupSaving ||
-                      useExistingLibraryLoading ||
-                      !selectedExistingLibraryDb ||
-                      !selectedExistingLibraryUser}
-                  >
-                    {useExistingLibraryLoading ? 'Opening library…' : 'Continue to sign in'}
-                  </button>
-                </div>
-              </div>
-            {:else}
+            {#if !folderHasOwnLibrary}
               <label class="field">
                 <span>Create a password</span>
                 <div class="field-input-row">
@@ -1189,6 +1141,94 @@
               </label>
             {/if}
 
+            {#if hasAdoptableLibrary}
+              <div class="existing-library-warning" class:collapsed={!otherLibrariesExpanded}>
+                {#if otherLibrariesCollapsible}
+                  <button
+                    type="button"
+                    class="existing-library-toggle"
+                    aria-expanded={otherLibrariesExpanded}
+                    onclick={() => (showOtherLibraries = !showOtherLibraries)}
+                  >
+                    <span class="existing-library-title">{existingLibraryPickerTitle}</span>
+                    <span class="existing-library-toggle-meta">
+                      {availableExistingLibraryDatabases.length} found
+                      <span class="existing-library-chevron" aria-hidden="true"
+                        >{otherLibrariesExpanded ? '▾' : '▸'}</span
+                      >
+                    </span>
+                  </button>
+                {:else}
+                  <div class="existing-library-title">{existingLibraryPickerTitle}</div>
+                {/if}
+                {#if otherLibrariesExpanded}
+                  <div class="existing-library-copy">{existingLibraryPickerCopy}</div>
+                  <div class="existing-library-picker">
+                    {#each existingLibraryDatabases as database (database.path)}
+                      <button
+                        type="button"
+                        class:selected={database.path === selectedExistingLibraryDb?.path}
+                        class="existing-library-option"
+                        disabled={(database.user_count ?? database.users?.length ?? 0) === 0}
+                        onclick={() => selectExistingLibraryDatabase(database)}
+                      >
+                        <span class="existing-library-option-main">
+                          <span>{database.source ?? 'Local database'}</span>
+                          <code>{summarizeDetectedLibraryPath(database.path)}</code>
+                        </span>
+                        <span class="existing-library-option-meta">
+                          {#if database.load_error}
+                            Cannot read users
+                          {:else}
+                            {database.user_count ?? database.users?.length ?? 0} user{(database.user_count ??
+                              database.users?.length ??
+                              0) === 1
+                              ? ''
+                              : 's'}
+                          {/if}
+                        </span>
+                      </button>
+                    {/each}
+                  </div>
+                  {#if selectedExistingLibraryDb}
+                    <label class="field">
+                      <span>User</span>
+                      <select class="field-input" bind:value={selectedExistingLibraryUserName}>
+                        {#each selectedExistingLibraryUsers as user (user.user_name)}
+                          <option value={user.user_name}>{existingLibraryUserLabel(user)}</option>
+                        {/each}
+                      </select>
+                      {#if selectedExistingLibraryUser}
+                        <div class="field-hint">Home: <code>{selectedExistingLibraryUser.home_dir}</code></div>
+                      {/if}
+                    </label>
+                  {/if}
+                  <div class="btn-row">
+                    <button
+                      type="button"
+                      class="btn secondary"
+                      onclick={browseForSetupFolder}
+                      disabled={!isDesktop || setupSaving || useExistingLibraryLoading}
+                    >
+                      Choose another folder
+                    </button>
+                    <button
+                      type="button"
+                      class="btn"
+                      onclick={useExistingSelectedLibrary}
+                      disabled={setupFolderInspectionLoading ||
+                        setupSaving ||
+                        useExistingLibraryLoading ||
+                        !selectedExistingLibraryDb ||
+                        !selectedExistingLibraryUser}
+                    >
+                      {useExistingLibraryLoading ? 'Opening library…' : 'Continue to sign in'}
+                    </button>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+
             {#if setupErrorMessage}
               <div class="alert alert--danger">{setupErrorMessage}</div>
             {/if}
@@ -1196,7 +1236,7 @@
               <div class="alert alert--info">Running without Tauri. Folder browsing is unavailable in this window.</div>
             {/if}
 
-            {#if hasExistingLibraryInSelectedFolder}
+            {#if folderHasOwnLibrary}
               <div class="btn-row btn-row--single">
                 <button
                   type="button"
@@ -1311,76 +1351,7 @@
               </div>
             </label>
 
-            {#if hasExistingLibraryInSelectedFolder}
-              <div class="existing-library-warning">
-                <div class="existing-library-title">Existing local library data found</div>
-                <div class="existing-library-copy">
-                  Choose which <code>assets.db</code> this computer should use, then choose the user name to sign in with.
-                </div>
-                <div class="existing-library-picker">
-                  {#each existingLibraryDatabases as database (database.path)}
-                    <button
-                      type="button"
-                      class:selected={database.path === selectedExistingLibraryDb?.path}
-                      class="existing-library-option"
-                      disabled={(database.user_count ?? database.users?.length ?? 0) === 0}
-                      onclick={() => selectExistingLibraryDatabase(database)}
-                    >
-                      <span class="existing-library-option-main">
-                        <span>{database.source ?? 'Local database'}</span>
-                        <code>{summarizeDetectedLibraryPath(database.path)}</code>
-                      </span>
-                      <span class="existing-library-option-meta">
-                        {#if database.load_error}
-                          Cannot read users
-                        {:else}
-                          {database.user_count ?? database.users?.length ?? 0} user{(database.user_count ??
-                            database.users?.length ??
-                            0) === 1
-                            ? ''
-                            : 's'}
-                        {/if}
-                      </span>
-                    </button>
-                  {/each}
-                </div>
-                {#if selectedExistingLibraryDb}
-                  <label class="field">
-                    <span>User</span>
-                    <select class="field-input" bind:value={selectedExistingLibraryUserName}>
-                      {#each selectedExistingLibraryUsers as user (user.user_name)}
-                        <option value={user.user_name}>{existingLibraryUserLabel(user)}</option>
-                      {/each}
-                    </select>
-                    {#if selectedExistingLibraryUser}
-                      <div class="field-hint">Home: <code>{selectedExistingLibraryUser.home_dir}</code></div>
-                    {/if}
-                  </label>
-                {/if}
-                <div class="btn-row">
-                  <button
-                    type="button"
-                    class="btn secondary"
-                    onclick={browseForSetupFolder}
-                    disabled={!isDesktop || localFolderChangeSaving || useExistingLibraryLoading}
-                  >
-                    Choose another folder
-                  </button>
-                  <button
-                    type="button"
-                    class="btn"
-                    onclick={useExistingSelectedLibrary}
-                    disabled={setupFolderInspectionLoading ||
-                      localFolderChangeSaving ||
-                      useExistingLibraryLoading ||
-                      !selectedExistingLibraryDb ||
-                      !selectedExistingLibraryUser}
-                  >
-                    {useExistingLibraryLoading ? 'Opening library…' : 'Open existing library'}
-                  </button>
-                </div>
-              </div>
-            {:else}
+            {#if !folderHasOwnLibrary}
               <label class="field">
                 <span>Create a new admin password</span>
                 <div class="field-input-row">
@@ -1433,6 +1404,94 @@
               </label>
             {/if}
 
+            {#if hasAdoptableLibrary}
+              <div class="existing-library-warning" class:collapsed={!otherLibrariesExpanded}>
+                {#if otherLibrariesCollapsible}
+                  <button
+                    type="button"
+                    class="existing-library-toggle"
+                    aria-expanded={otherLibrariesExpanded}
+                    onclick={() => (showOtherLibraries = !showOtherLibraries)}
+                  >
+                    <span class="existing-library-title">{existingLibraryPickerTitle}</span>
+                    <span class="existing-library-toggle-meta">
+                      {availableExistingLibraryDatabases.length} found
+                      <span class="existing-library-chevron" aria-hidden="true"
+                        >{otherLibrariesExpanded ? '▾' : '▸'}</span
+                      >
+                    </span>
+                  </button>
+                {:else}
+                  <div class="existing-library-title">{existingLibraryPickerTitle}</div>
+                {/if}
+                {#if otherLibrariesExpanded}
+                  <div class="existing-library-copy">{existingLibraryPickerCopy}</div>
+                  <div class="existing-library-picker">
+                    {#each existingLibraryDatabases as database (database.path)}
+                      <button
+                        type="button"
+                        class:selected={database.path === selectedExistingLibraryDb?.path}
+                        class="existing-library-option"
+                        disabled={(database.user_count ?? database.users?.length ?? 0) === 0}
+                        onclick={() => selectExistingLibraryDatabase(database)}
+                      >
+                        <span class="existing-library-option-main">
+                          <span>{database.source ?? 'Local database'}</span>
+                          <code>{summarizeDetectedLibraryPath(database.path)}</code>
+                        </span>
+                        <span class="existing-library-option-meta">
+                          {#if database.load_error}
+                            Cannot read users
+                          {:else}
+                            {database.user_count ?? database.users?.length ?? 0} user{(database.user_count ??
+                              database.users?.length ??
+                              0) === 1
+                              ? ''
+                              : 's'}
+                          {/if}
+                        </span>
+                      </button>
+                    {/each}
+                  </div>
+                  {#if selectedExistingLibraryDb}
+                    <label class="field">
+                      <span>User</span>
+                      <select class="field-input" bind:value={selectedExistingLibraryUserName}>
+                        {#each selectedExistingLibraryUsers as user (user.user_name)}
+                          <option value={user.user_name}>{existingLibraryUserLabel(user)}</option>
+                        {/each}
+                      </select>
+                      {#if selectedExistingLibraryUser}
+                        <div class="field-hint">Home: <code>{selectedExistingLibraryUser.home_dir}</code></div>
+                      {/if}
+                    </label>
+                  {/if}
+                  <div class="btn-row">
+                    <button
+                      type="button"
+                      class="btn secondary"
+                      onclick={browseForSetupFolder}
+                      disabled={!isDesktop || localFolderChangeSaving || useExistingLibraryLoading}
+                    >
+                      Choose another folder
+                    </button>
+                    <button
+                      type="button"
+                      class="btn"
+                      onclick={useExistingSelectedLibrary}
+                      disabled={setupFolderInspectionLoading ||
+                        localFolderChangeSaving ||
+                        useExistingLibraryLoading ||
+                        !selectedExistingLibraryDb ||
+                        !selectedExistingLibraryUser}
+                    >
+                      {useExistingLibraryLoading ? 'Opening library…' : 'Open existing library'}
+                    </button>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+
             <div class="btn-row">
               <button
                 type="button"
@@ -1442,7 +1501,7 @@
               >
                 Back
               </button>
-              {#if !hasExistingLibraryInSelectedFolder}
+              {#if !folderHasOwnLibrary}
                 <button type="submit" class="btn" disabled={!canChangeLocalFolder}>
                   {localFolderChangeSaving ? 'Creating…' : 'Create new library'}
                 </button>
@@ -2008,10 +2067,40 @@
     display: grid;
     gap: 10px;
   }
+  .existing-library-warning.collapsed {
+    gap: 0;
+  }
   .existing-library-title {
     font-size: 13px;
     color: var(--warning);
     font-weight: 700;
+  }
+  .existing-library-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+  }
+  .existing-library-toggle-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-700);
+    flex-shrink: 0;
+  }
+  .existing-library-chevron {
+    font-size: 11px;
+    color: var(--warning);
   }
   .existing-library-copy {
     font-size: 12.5px;
