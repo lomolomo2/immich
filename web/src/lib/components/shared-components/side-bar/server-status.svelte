@@ -1,37 +1,33 @@
 <script lang="ts">
-  import ServerAboutModal from '$lib/modals/ServerAboutModal.svelte';
-  import { userInteraction } from '$lib/stores/user.svelte';
   import { websocketStore } from '$lib/stores/websocket';
-  import { requestServerInfo } from '$lib/utils/auth';
-  import {
-    getAboutInfo,
-    getVersionHistory,
-    type ServerAboutResponseDto,
-    type ServerVersionHistoryResponseDto,
-  } from '@immich/sdk';
-  import { modalManager } from '@immich/ui';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
 
-  const { serverVersion, connected } = websocketStore;
+  const { connected } = websocketStore;
 
-  let info: ServerAboutResponseDto | undefined = $state();
-  let versions: ServerVersionHistoryResponseDto[] = $state([]);
+  let lomodVersion: string | undefined = $state();
 
-  onMount(async () => {
-    if (userInteraction.aboutInfo && userInteraction.versions && $serverVersion) {
-      info = userInteraction.aboutInfo;
-      versions = userInteraction.versions;
+  const loadLomodVersion = async () => {
+    const response = await fetch('/api/lomo/version');
+    if (!response.ok) {
       return;
     }
-    await requestServerInfo();
-    [info, versions] = await Promise.all([getAboutInfo(), getVersionHistory()]);
-    userInteraction.aboutInfo = info;
-    userInteraction.versions = versions;
+
+    const data = (await response.json()) as { version?: string };
+    lomodVersion = data.version?.trim() || undefined;
+  };
+
+  onMount(() => {
+    void loadLomodVersion().catch((error) => console.error('Failed to load lomod version', error));
   });
-  let version = $derived(
-    $serverVersion ? `v${$serverVersion.major}.${$serverVersion.minor}.${$serverVersion.patch}` : null,
-  );
+  let lomodVersionLabel = $derived.by(() => {
+    if (!lomodVersion) {
+      return null;
+    }
+
+    const revision = lomodVersion.split('.').at(-1);
+    return `lomod ${revision && /^[\da-f]{7,40}$/i.test(revision) ? revision.slice(0, 7) : lomodVersion}`;
+  });
 </script>
 
 <div
@@ -50,14 +46,10 @@
   {/if}
 
   <div class="flex justify-between justify-items-center">
-    {#if $connected && version}
-      <button
-        type="button"
-        onclick={() => info && modalManager.show(ServerAboutModal, { versions, info })}
-        class="dark:text-immich-gray flex gap-1 place-items-center place-content-center"
-      >
-        {version}
-      </button>
+    {#if $connected && lomodVersionLabel}
+      <span title={lomodVersion} class="dark:text-immich-gray">
+        {lomodVersionLabel}
+      </span>
     {:else}
       <p class="text-red-500">{$t('unknown')}</p>
     {/if}
