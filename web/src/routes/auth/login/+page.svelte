@@ -160,6 +160,69 @@
   let loadingProgress = $state(4);
   let loadingStageIdx = $state(0);
 
+  // First-run "Setting up lomod…" progress view, shown while a new local library is created.
+  const SETUP_STEPS = [
+    'Creating your library folder',
+    'Starting the lomod service',
+    'Securing it with a local key',
+    'Finding this computer on your network',
+  ];
+  let settingUpLibrary = $state(false);
+  let setupStepIdx = $state(0);
+  let setupLanUrl = $state('');
+  let setupStepTimer: ReturnType<typeof setInterval> | undefined;
+
+  const loadSetupLanUrl = async () => {
+    try {
+      const response = await fetch('/api/lomo/browser-access-link');
+      const data = (await response.json().catch(() => ({}))) as { host?: string };
+      if (data.host) {
+        setupLanUrl = `http://${hostForUrl(data.host)}:${LOMO_BACKEND_PORT}`;
+      }
+    } catch {
+      // The pill is cosmetic; skip it if discovery fails.
+    }
+  };
+
+  const startSetupProgress = () => {
+    if (setupStepTimer) {
+      clearInterval(setupStepTimer);
+    }
+    settingUpLibrary = true;
+    setupStepIdx = 0;
+    void loadSetupLanUrl();
+    setupStepTimer = setInterval(() => {
+      if (setupStepIdx < SETUP_STEPS.length - 1) {
+        setupStepIdx += 1;
+      }
+    }, 850);
+  };
+
+  const finishSetupProgress = () => {
+    if (setupStepTimer) {
+      clearInterval(setupStepTimer);
+      setupStepTimer = undefined;
+    }
+    setupStepIdx = SETUP_STEPS.length;
+  };
+
+  const stopSetupProgress = () => {
+    if (setupStepTimer) {
+      clearInterval(setupStepTimer);
+      setupStepTimer = undefined;
+    }
+    settingUpLibrary = false;
+    setupStepIdx = 0;
+  };
+
+  const markFirstRunGuide = () => {
+    try {
+      localStorage.setItem('lomo_show_setup_guide', '1');
+    } catch {
+      // Non-fatal: the guide just won't auto-open.
+    }
+  };
+
   const passwordStrength = $derived.by(() => {
     const pw = setupPassword;
     if (!pw) return 0;
@@ -672,10 +735,13 @@
       }
 
       const adminPassword = setupPassword;
+      startSetupProgress();
       const setupState = (await invoke('create_new_local_library', {
         photosDir: nextDir,
         password: adminPassword,
       })) as InitialSetupState;
+      finishSetupProgress();
+      markFirstRunGuide();
       await clearClientSession();
       applyInitialSetupState(setupState);
       changingLocalFolder = false;
@@ -687,8 +753,12 @@
       password = adminPassword;
       localFolderChangeSuccessMessage =
         'New local library created. Sign in with admin and the password you just created.';
-      await handleLogin({ email: 'admin', password: adminPassword });
+      const signedIn = await handleLogin({ email: 'admin', password: adminPassword });
+      if (!signedIn) {
+        stopSetupProgress();
+      }
     } catch (error) {
+      stopSetupProgress();
       localFolderChangeErrorMessage = `Failed to change local folder: ${
         error instanceof Error ? error.message : String(error)
       }`;
@@ -723,15 +793,20 @@
         return;
       }
 
+      startSetupProgress();
       await invoke('complete_initial_setup', { photosDir: nextDir, password: nextPassword });
+      finishSetupProgress();
+      markFirstRunGuide();
       email = 'admin';
       password = nextPassword;
       needsLocalSetup = false;
       const signedIn = await handleLogin({ email: 'admin', password: nextPassword });
       if (!signedIn) {
+        stopSetupProgress();
         errorMessage = errorMessage || 'Setup completed. Sign in with the admin password you just created.';
       }
     } catch (error) {
+      stopSetupProgress();
       setupErrorMessage = `Failed to complete setup: ${error instanceof Error ? error.message : String(error)}`;
       needsLocalSetup = true;
     } finally {
@@ -875,7 +950,35 @@
 <div class="onb-page">
   <div class="stage">
     <div class="stage-inner">
-      {#if oauthLoading || initialSetupLoading}
+      {#if settingUpLibrary}
+        <div class="setup-wrap fade-in" role="status" aria-live="polite">
+          <div class="loader-logo"></div>
+          <h2 class="setup-heading">Setting up lomod…</h2>
+          {#if setupLanUrl}
+            <div class="setup-url-pill">{setupLanUrl}</div>
+          {/if}
+          <div class="setup-steps-card">
+            {#each SETUP_STEPS as step, i (step)}
+              <div
+                class="setup-step"
+                class:done={i < setupStepIdx}
+                class:active={i === setupStepIdx}
+              >
+                <span class="setup-step-icon" aria-hidden="true">
+                  {#if i < setupStepIdx}
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3">
+                      <path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  {:else if i === setupStepIdx}
+                    <span class="setup-step-spinner"></span>
+                  {/if}
+                </span>
+                <span class="setup-step-label">{step}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {:else if oauthLoading || initialSetupLoading}
         <div class="loader-wrap fade-in" role="status" aria-live="polite">
           <div class="brand brand--stacked">
             <div class="loader-logo"></div>
@@ -2516,6 +2619,87 @@
     background: var(--brand);
     border-radius: 2px;
     transition: width 0.3s ease;
+  }
+
+  .setup-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .setup-heading {
+    margin: 4px 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink-900);
+    letter-spacing: -0.01em;
+  }
+  .setup-url-pill {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--ink-500);
+    background: var(--brand-tint, #f3f0fd);
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    padding: 5px 14px;
+  }
+  .setup-steps-card {
+    width: 320px;
+    max-width: 100%;
+    margin-top: 6px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 10px 30px rgba(30, 26, 58, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .setup-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    color: var(--ink-400);
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+  .setup-step.active {
+    background: var(--brand-soft);
+    color: var(--ink-900);
+    font-weight: 500;
+  }
+  .setup-step.done {
+    color: var(--ink-700);
+  }
+  .setup-step-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong, #d6cff0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .setup-step.done .setup-step-icon {
+    background: var(--success, #21a36a);
+    border-color: var(--success, #21a36a);
+  }
+  .setup-step.active .setup-step-icon {
+    border-color: var(--brand);
+  }
+  .setup-step-spinner {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--brand-soft);
+    border-top-color: var(--brand);
+    animation: spin 0.8s linear infinite;
   }
 
   .fade-in {
