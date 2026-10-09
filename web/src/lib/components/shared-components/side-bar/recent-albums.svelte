@@ -11,7 +11,9 @@
   const refreshAlbums = async () => {
     try {
       const allAlbums = await getAllAlbums({});
-      albums = allAlbums.sort((a, b) => (a.updatedAt > b.updatedAt ? -1 : 1)).slice(0, 3);
+      albums = allAlbums
+        .filter((album) => !album.albumName.startsWith('/Faces'))
+        .sort((a, b) => (a.updatedAt > b.updatedAt ? -1 : 1));
       userInteraction.recentAlbums = albums;
     } catch (error) {
       handleError(error, $t('failed_to_load_assets'));

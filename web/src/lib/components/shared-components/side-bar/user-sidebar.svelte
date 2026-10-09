@@ -6,9 +6,10 @@
   import { Route } from '$lib/route';
   import { recentAlbumsDropdown } from '$lib/stores/preferences.store';
   import { preferences } from '$lib/stores/user.store';
-  import { NavbarGroup, NavbarItem } from '@immich/ui';
+  import { Icon, NavbarGroup, NavbarItem } from '@immich/ui';
   import {
     mdiAccount,
+    mdiAccountMultipleOutline,
     mdiAccountOutline,
     mdiFolderOutline,
     mdiHeart,
@@ -61,6 +62,16 @@
   >
     {#snippet items()}
       <span in:fly={{ y: -20 }} class="hidden md:block">
+        <a
+          href={Route.faces()}
+          title="Faces"
+          class="flex w-full place-items-center justify-between gap-4 rounded-e-full py-3 transition-[padding] delay-100 duration-100 hover:cursor-pointer hover:bg-subtle hover:text-immich-primary dark:text-immich-dark-fg dark:hover:bg-immich-dark-gray dark:hover:text-immich-dark-primary ps-10 group-hover:sm:px-10 md:px-10"
+        >
+          <div class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
+            <Icon icon={mdiAccountMultipleOutline} size="1rem" />
+          </div>
+          <div class="grow text-sm font-medium truncate">Faces</div>
+        </a>
         <RecentAlbums />
       </span>
     {/snippet}
