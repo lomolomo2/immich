@@ -176,3 +176,12 @@
     @apply bg-subtle rounded-lg;
   }
 }
+
+/* Lomorage rebrand: replace the bundled @immich/ui flower logo wherever its
+   Logo component renders (modal headers, login, sidebar, etc.). The component
+   always emits <img alt="Immich logo">, so this swaps it everywhere without
+   touching node_modules. /lomorage-icon.png is served from web/static. */
+img[alt='Immich logo'] {
+  content: url('/lomorage-icon.png');
+  object-fit: contain;
+}
