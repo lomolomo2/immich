@@ -15,8 +15,9 @@
   import { sidebarStore } from '$lib/stores/sidebar.svelte';
   import { user } from '$lib/stores/user.store';
   import LomorageLogo from '$lib/components/branding/LomorageLogo.svelte';
-  import { ActionButton, Button, IconButton } from '@immich/ui';
-  import { mdiCellphoneArrowDownVariant, mdiMagnify, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
+  import FirstRunSuccessModal from '$lib/modals/FirstRunSuccessModal.svelte';
+  import { ActionButton, Button, IconButton, modalManager } from '@immich/ui';
+  import { mdiCellphoneArrowDownVariant, mdiMagnify, mdiMenu, mdiQrcode, mdiTrayArrowUp } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import ThemeButton from '../theme-button.svelte';
   import UserAvatar from '../user-avatar.svelte';
@@ -93,6 +94,29 @@
             id="search-button"
             class="sm:hidden"
             aria-label={$t('go_to_search')}
+          />
+        {/if}
+
+        {#if !page.url.pathname.includes('/admin')}
+          <Button
+            leadingIcon={mdiQrcode}
+            onclick={() => modalManager.show(FirstRunSuccessModal, {})}
+            class="hidden lg:flex"
+            variant="ghost"
+            size="medium"
+            color="secondary"
+            >Connect
+          </Button>
+          <IconButton
+            color="secondary"
+            shape="round"
+            variant="ghost"
+            size="medium"
+            onclick={() => modalManager.show(FirstRunSuccessModal, {})}
+            title="Connect"
+            aria-label="Connect"
+            icon={mdiQrcode}
+            class="lg:hidden"
           />
         {/if}
 
