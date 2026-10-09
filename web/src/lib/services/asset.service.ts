@@ -334,7 +334,8 @@ export const handleDownloadAsset = async (asset: AssetResponseDto, { edited }: {
     }
 
     try {
-      toastManager.success($t('downloading_asset_filename', { values: { filename } }));
+      // No toast here — in the desktop app the download itself prompts a
+      // native Save As dialog, so an eager "Success" popup is just noise.
       downloadUrl(
         getBaseUrl() +
           `/assets/${id}/original` +
