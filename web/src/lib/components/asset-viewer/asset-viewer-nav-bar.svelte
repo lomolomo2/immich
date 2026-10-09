@@ -208,11 +208,8 @@
             text={playOriginalVideo ? $t('play_transcoded_video') : $t('play_original_video')}
           />
         {/if}
-        {#if isOwner}
+        {#if isOwner && asset.type === AssetTypeEnum.Video}
           <hr />
-          <ActionMenuItem action={Actions.RefreshFacesJob} />
-          <ActionMenuItem action={Actions.RefreshMetadataJob} />
-          <ActionMenuItem action={Actions.RegenerateThumbnailJob} />
           <ActionMenuItem action={Actions.TranscodeVideoJob} />
         {/if}
       </ButtonContextMenu>
