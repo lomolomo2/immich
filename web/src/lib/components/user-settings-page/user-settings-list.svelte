@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import ChangePinCodeSettings from '$lib/components/user-settings-page/PinCodeSettings.svelte';
-  import DownloadSettings from '$lib/components/user-settings-page/download-settings.svelte';
   import MobileUploadSettings from '$lib/components/user-settings-page/mobile-upload-settings.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -11,7 +10,6 @@
     mdiAccountOutline,
     mdiCellphoneArrowDownVariant,
     mdiCogOutline,
-    mdiDownload,
     mdiFormTextboxPassword,
     mdiLockSmart,
     mdiTwoFactorAuthentication,
@@ -50,15 +48,6 @@
     subtitle="Scan a QR code to upload photos from your phone"
   >
     <MobileUploadSettings />
-  </SettingAccordion>
-
-  <SettingAccordion
-    icon={mdiDownload}
-    key="download-settings"
-    title={$t('download_settings')}
-    subtitle={$t('download_settings_description')}
-  >
-    <DownloadSettings />
   </SettingAccordion>
 
   {#if featureFlagsManager.value.oauth}
