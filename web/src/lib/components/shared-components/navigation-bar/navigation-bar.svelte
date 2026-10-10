@@ -17,7 +17,7 @@
   import LomorageLogo from '$lib/components/branding/LomorageLogo.svelte';
   import FirstRunSuccessModal from '$lib/modals/FirstRunSuccessModal.svelte';
   import { ActionButton, Button, IconButton, modalManager } from '@immich/ui';
-  import { mdiCellphoneArrowDownVariant, mdiMagnify, mdiMenu, mdiQrcode, mdiTrayArrowUp } from '@mdi/js';
+  import { mdiCellphoneArrowDownVariant, mdiMagnify, mdiMenu, mdiQrcode, mdiRefresh, mdiTrayArrowUp } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import ThemeButton from '../theme-button.svelte';
   import UserAvatar from '../user-avatar.svelte';
@@ -36,6 +36,20 @@
   let innerWidth: number = $state(0);
 
   const { Cast } = $derived(getGlobalActions($t));
+
+  let refreshing = $state(false);
+
+  // Photos uploaded from the phone app (or another browser) don't reach this page on their own:
+  // ask the proxy to drop its cached timeline, then reload the page.
+  const refresh = async () => {
+    refreshing = true;
+    try {
+      await fetch('/api/lomo/refresh', { method: 'POST' });
+    } catch {
+      // reload anyway
+    }
+    location.reload();
+  };
 </script>
 
 <svelte:window bind:innerWidth />
@@ -165,6 +179,19 @@
             class="lg:hidden"
           />
         {/if}
+
+        <IconButton
+          color="secondary"
+          shape="round"
+          variant="ghost"
+          size="medium"
+          onclick={refresh}
+          disabled={refreshing}
+          title={$t('refresh')}
+          aria-label={$t('refresh')}
+          icon={mdiRefresh}
+          id="refresh-button"
+        />
 
         <ThemeButton />
 
