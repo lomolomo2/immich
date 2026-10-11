@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import { shortcut } from '$lib/actions/shortcut';
   import AlbumMap from '$lib/components/album-page/album-map.svelte';
   import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
@@ -79,7 +80,7 @@
     <section class="pt-8 md:pt-24 px-2 md:px-0">
       <!-- ALBUM TITLE -->
       <h1 class="text-2xl md:text-4xl lg:text-6xl text-primary outline-none transition-all">
-        {album.albumName}
+        {getAlbumDisplayName(album.albumName)}
       </h1>
 
       {#if album.assetCount > 0}
@@ -107,7 +108,7 @@
     >
       <SelectAllAssets {timelineManager} {assetInteraction} />
       {#if sharedLink.allowDownload}
-        <DownloadAction filename="{album.albumName}.zip" />
+        <DownloadAction filename="{getAlbumDisplayName(album.albumName)}.zip" />
       {/if}
     </AssetSelectControlBar>
   {:else}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import { goto } from '$app/navigation';
   import SharedLinkFormFields from '$lib/components/SharedLinkFormFields.svelte';
   import { Route } from '$lib/route';
@@ -50,7 +51,7 @@
   {#if shareType === SharedLinkType.Album}
     <div class="text-sm">
       {$t('public_album')} |
-      <span class="text-primary">{sharedLink.album?.albumName}</span>
+      <span class="text-primary">{getAlbumDisplayName(sharedLink.album?.albumName ?? '')}</span>
     </div>
   {/if}
 

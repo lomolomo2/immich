@@ -8,6 +8,7 @@ import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import { Route } from '$lib/route';
 import { user } from '$lib/stores/user.store';
+import { getAlbumDisplayName } from '$lib/utils/album-folders';
 import { createAlbumAndRedirect } from '$lib/utils/album-utils';
 import { downloadArchive } from '$lib/utils/asset-utils';
 import { openFileUploadDialog } from '$lib/utils/file-uploader';
@@ -256,7 +257,7 @@ export const handleDeleteAlbum = async (album: AlbumResponseDto, options?: { pro
   if (prompt) {
     const confirmation =
       album.albumName.length > 0
-        ? $t('album_delete_confirmation', { values: { album: album.albumName } })
+        ? $t('album_delete_confirmation', { values: { album: getAlbumDisplayName(album.albumName) } })
         : $t('unnamed_album_delete_confirmation');
     const description = $t('album_delete_confirmation_description');
     const success = await modalManager.showDialog({ prompt: `${confirmation} ${description}` });
@@ -279,14 +280,14 @@ export const handleDeleteAlbum = async (album: AlbumResponseDto, options?: { pro
 };
 
 export const handleDownloadAlbum = async (album: AlbumResponseDto) => {
-  await downloadArchive(`${album.albumName}.zip`, { albumId: album.id });
+  await downloadArchive(`${getAlbumDisplayName(album.albumName)}.zip`, { albumId: album.id });
 };
 
 export const handleConfirmAlbumDelete = async (album: AlbumResponseDto) => {
   const $t = await getFormatter();
   const confirmation =
     album.albumName.length > 0
-      ? $t('album_delete_confirmation', { values: { album: album.albumName } })
+      ? $t('album_delete_confirmation', { values: { album: getAlbumDisplayName(album.albumName) } })
       : $t('unnamed_album_delete_confirmation');
 
   const description = $t('album_delete_confirmation_description');

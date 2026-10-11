@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import { SCROLL_PROPERTIES } from '$lib/components/shared-components/album-selection/album-selection-utils';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -38,9 +39,13 @@
   // This part of the code is responsible for splitting album name into 3 parts where part 2 is the search query
   // It is used to highlight the search query in the album name
   const albumNameArray: string[] = $derived.by(() => {
-    let { albumName } = album;
+    const albumName = getAlbumDisplayName(album.albumName);
     let findIndex = normalizeSearchString(albumName).indexOf(normalizeSearchString(searchQuery));
     let findLength = searchQuery.length;
+    if (findIndex === -1) {
+      // The search matched the album's folder, not its own name
+      return [albumName, '', ''];
+    }
     return [
       albumName.slice(0, findIndex),
       albumName.slice(findIndex, findIndex + findLength),
@@ -143,7 +148,7 @@
       {/if}
     </span>
     <span class="flex h-full flex-col items-start justify-center overflow-hidden">
-      <span class="w-full shrink overflow-hidden text-ellipsis whitespace-nowrap"
+      <span class="w-full shrink overflow-hidden text-ellipsis whitespace-nowrap" title={album.albumName}
         >{albumNameArray[0]}<b>{albumNameArray[1]}</b>{albumNameArray[2]}</span
       >
       <span class="flex gap-1 text-sm">

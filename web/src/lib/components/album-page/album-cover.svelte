@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import AssetCover from '$lib/components/sharedlinks-page/covers/asset-cover.svelte';
   import NoCover from '$lib/components/sharedlinks-page/covers/no-cover.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -13,7 +14,7 @@
 
   let { album, preload = false, class: className }: Props = $props();
 
-  let alt = $derived(album.albumName || $t('unnamed_album'));
+  let alt = $derived(getAlbumDisplayName(album.albumName) || $t('unnamed_album'));
   let thumbnailUrl = $derived(
     album.albumThumbnailAssetId ? getAssetMediaUrl({ id: album.albumThumbnailAssetId }) : null,
   );

@@ -2,8 +2,11 @@ import {
   getAlbumDisplayName,
   getAlbumFolderEntries,
   getAlbumFolderLevel,
+  getAlbumFolderPath,
   getAlbumNamePath,
+  getAlbumParentUrl,
   parseAlbumFolderPath,
+  renameAlbumInFolder,
 } from '$lib/utils/album-folders';
 import { albumFactory } from '@test-data/factories/album-factory';
 
@@ -23,6 +26,30 @@ describe('getAlbumDisplayName', () => {
     expect(getAlbumDisplayName('/Hedy/2022-ski')).toBe('2022-ski');
     expect(getAlbumDisplayName('0806-LakeTahoe')).toBe('0806-LakeTahoe');
     expect(getAlbumDisplayName('')).toBe('');
+  });
+});
+
+describe('getAlbumFolderPath', () => {
+  it('is the path without the album itself', () => {
+    expect(getAlbumFolderPath('/Hedy/dance/recital')).toEqual(['Hedy', 'dance']);
+    expect(getAlbumFolderPath('0806-LakeTahoe')).toEqual([]);
+  });
+});
+
+describe('getAlbumParentUrl', () => {
+  it('is the albums page at the album’s folder', () => {
+    expect(getAlbumParentUrl('/Hedy/Art')).toBe('/albums?path=Hedy');
+    expect(getAlbumParentUrl('/Hedy/dance/recital')).toBe(`/albums?${new URLSearchParams({ path: 'Hedy/dance' })}`);
+    expect(getAlbumParentUrl('wedding')).toBe('/albums');
+  });
+});
+
+describe('renameAlbumInFolder', () => {
+  it('replaces only the album’s own name', () => {
+    expect(renameAlbumInFolder('/Hedy/Art', 'Drawings')).toBe('/Hedy/Drawings');
+    expect(renameAlbumInFolder('/Art/Art', 'Drawings')).toBe('/Art/Drawings');
+    expect(renameAlbumInFolder('wedding', 'Wedding 2019')).toBe('Wedding 2019');
+    expect(renameAlbumInFolder('', 'New')).toBe('New');
   });
 });
 

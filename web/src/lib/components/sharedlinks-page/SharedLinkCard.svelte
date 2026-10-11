@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import ShareCover from '$lib/components/sharedlinks-page/covers/share-cover.svelte';
   import { Route } from '$lib/route';
   import { getSharedLinkActions } from '$lib/services/shared-link.service';
@@ -79,7 +80,7 @@
 
         <Text size="large" color="primary" class="flex place-items-center gap-2 break-all" fontWeight="medium">
           {#if sharedLink.type === SharedLinkType.Album}
-            {sharedLink.album?.albumName}
+            {getAlbumDisplayName(sharedLink.album?.albumName ?? '')}
           {:else if sharedLink.type === SharedLinkType.Individual}
             {$t('individual_share')}
           {/if}

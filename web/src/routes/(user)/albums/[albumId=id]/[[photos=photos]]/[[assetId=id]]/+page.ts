@@ -1,3 +1,4 @@
+import { getAlbumDisplayName } from '$lib/utils/album-folders';
 import { authenticate } from '$lib/utils/auth';
 import { getAlbumInfo } from '@immich/sdk';
 import type { PageLoad } from './$types';
@@ -9,7 +10,7 @@ export const load = (async ({ params, url }) => {
   return {
     album,
     meta: {
-      title: album.albumName,
+      title: getAlbumDisplayName(album.albumName),
     },
   };
 }) satisfies PageLoad;

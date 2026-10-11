@@ -37,6 +37,7 @@
   import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
   import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
   import { Route } from '$lib/route';
+  import { getAlbumDisplayName, getAlbumParentUrl } from '$lib/utils/album-folders';
   import {
     getAlbumActions,
     getAlbumAssetsActions,
@@ -135,7 +136,7 @@
       cancelMultiselect(assetInteraction);
       return;
     }
-    await goto(Route.albums());
+    await goto(getAlbumParentUrl(album.albumName));
   };
 
   const refreshAlbum = async () => {
@@ -288,7 +289,7 @@
 
   const onAlbumDelete = async ({ id }: AlbumResponseDto) => {
     if (id === album?.id) {
-      await goto(Route.albums());
+      await goto(getAlbumParentUrl(album.albumName));
       viewMode = AlbumPageViewMode.VIEW;
     }
   };
@@ -476,7 +477,7 @@
           ></FavoriteAction>
         {/if}
         <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
-          <DownloadAction menuItem filename="{album.albumName}.zip" />
+          <DownloadAction menuItem filename="{getAlbumDisplayName(album.albumName)}.zip" />
           {#if assetInteraction.isAllUserOwned}
             <ChangeDate menuItem />
             <ChangeDescription menuItem />
@@ -510,7 +511,7 @@
       </AssetSelectControlBar>
     {:else}
       {#if viewMode === AlbumPageViewMode.VIEW}
-        <ControlAppBar showBackButton backIcon={mdiArrowLeft} onClose={() => goto(Route.albums())}>
+        <ControlAppBar showBackButton backIcon={mdiArrowLeft} onClose={() => goto(getAlbumParentUrl(album.albumName))}>
           {#snippet trailing()}
             <ActionButton action={Cast} />
 

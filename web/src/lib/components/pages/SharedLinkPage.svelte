@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import AlbumViewer from '$lib/components/album-page/album-viewer.svelte';
   import IndividualSharedViewer from '$lib/components/share-page/individual-shared-viewer.svelte';
   import ControlAppBar from '$lib/components/shared-components/control-app-bar.svelte';
@@ -43,7 +44,7 @@
       sharedLink = await sharedLinkLogin({ key, slug, sharedLinkLoginDto: { password } });
       setSharedLink(sharedLink);
       passwordRequired = false;
-      title = (sharedLink.album ? sharedLink.album.albumName : $t('public_share')) + ' - lomorage';
+      title = (sharedLink.album ? getAlbumDisplayName(sharedLink.album.albumName) : $t('public_share')) + ' - lomorage';
       description =
         sharedLink.description ||
         $t('shared_photos_and_videos_count', { values: { assetCount: sharedLink.assets.length } });

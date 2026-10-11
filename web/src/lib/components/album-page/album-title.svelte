@@ -1,6 +1,7 @@
 <script lang="ts">
   import { shortcut } from '$lib/actions/shortcut';
   import { eventManager } from '$lib/managers/event-manager.svelte';
+  import { getAlbumDisplayName, renameAlbumInFolder } from '$lib/utils/album-folders';
   import { handleError } from '$lib/utils/handle-error';
   import { updateAlbumInfo } from '@immich/sdk';
   import { t } from 'svelte-i18n';
@@ -14,10 +15,11 @@
 
   let { id, albumName = $bindable(), isOwned, onUpdate }: Props = $props();
 
-  let newAlbumName = $derived(albumName);
+  // Only the album's own name is shown and edited; it stays in its folder ("/Hedy/Art" -> "Art").
+  let newAlbumName = $derived(getAlbumDisplayName(albumName));
 
   const handleUpdateName = async () => {
-    if (newAlbumName === albumName) {
+    if (newAlbumName === getAlbumDisplayName(albumName)) {
       return;
     }
 
@@ -25,7 +27,7 @@
       const response = await updateAlbumInfo({
         id,
         updateAlbumDto: {
-          albumName: newAlbumName,
+          albumName: renameAlbumInFolder(albumName, newAlbumName),
         },
       });
       ({ albumName } = response);

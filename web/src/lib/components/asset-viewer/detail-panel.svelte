@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import { goto } from '$app/navigation';
   import DetailPanelDescription from '$lib/components/asset-viewer/detail-panel-description.svelte';
   import DetailPanelLocation from '$lib/components/asset-viewer/detail-panel-location.svelte';
@@ -549,7 +550,9 @@
             </div>
 
             <div class="mb-auto mt-auto">
-              <p class="dark:text-immich-dark-primary">{album.albumName}</p>
+              <p class="dark:text-immich-dark-primary" title={album.albumName}>
+                {getAlbumDisplayName(album.albumName)}
+              </p>
               <div class="flex flex-col gap-0 text-sm">
                 <div>
                   <AlbumListItemDetails {album} />

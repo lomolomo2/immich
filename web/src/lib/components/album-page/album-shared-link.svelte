@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import { getSharedLinkActions } from '$lib/services/shared-link.service';
   import { locale } from '$lib/stores/preferences.store';
   import type { AlbumResponseDto, SharedLinkResponseDto } from '@immich/sdk';
@@ -36,7 +37,7 @@
 
 <div class="flex justify-between items-center">
   <div class="flex flex-col gap-1">
-    <Text size="small">{sharedLink.description || album.albumName}</Text>
+    <Text size="small">{sharedLink.description || getAlbumDisplayName(album.albumName)}</Text>
     <Text size="tiny" color="muted">{getShareProperties()}</Text>
   </div>
   <div class="flex">

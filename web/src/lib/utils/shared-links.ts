@@ -1,4 +1,5 @@
 import { getAssetMediaUrl, setSharedLink } from '$lib/utils';
+import { getAlbumDisplayName } from '$lib/utils/album-folders';
 import { authenticate } from '$lib/utils/auth';
 import { getFormatter } from '$lib/utils/i18n';
 import { getAssetInfoFromParam } from '$lib/utils/navigation';
@@ -43,7 +44,7 @@ export const loadSharedLink = async ({
       sharedLink,
       asset,
       meta: {
-        title: sharedLink.album ? sharedLink.album.albumName : $t('public_share'),
+        title: sharedLink.album ? getAlbumDisplayName(sharedLink.album.albumName) : $t('public_share'),
         description: sharedLink.description || $t('shared_photos_and_videos_count', { values: { assetCount } }),
         imageUrl: assetPath,
       },

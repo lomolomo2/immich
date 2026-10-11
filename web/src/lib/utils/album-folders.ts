@@ -15,12 +15,28 @@ export const getAlbumNamePath = (albumName: string): string[] =>
 /** The album's own name, without its folders: "/Hedy/2022-ski" -> "2022-ski". */
 export const getAlbumDisplayName = (albumName: string): string => getAlbumNamePath(albumName).at(-1) ?? albumName;
 
+/** The folder an album is in: "/Hedy/2022-ski" -> ["Hedy"]. */
+export const getAlbumFolderPath = (albumName: string): string[] => getAlbumNamePath(albumName).slice(0, -1);
+
+/**
+ * Renames an album in place, keeping it in its folder: ("/Hedy/2022-ski", "Ski") -> "/Hedy/Ski".
+ * Pass the new name for the album itself, as getAlbumDisplayName shows it.
+ */
+export const renameAlbumInFolder = (albumName: string, newDisplayName: string): string => {
+  const displayName = getAlbumDisplayName(albumName);
+  const index = displayName ? albumName.lastIndexOf(displayName) : -1;
+  return index === -1 ? newDisplayName : albumName.slice(0, index) + newDisplayName;
+};
+
 /** Parses the albums page's `path` search parameter ("Hedy/2022") into folder names. */
 export const parseAlbumFolderPath = (path: string | null): string[] => (path ? getAlbumNamePath(path) : []);
 
 /** The albums page showing the folder at `path` ([] = the top level). */
 export const getAlbumFolderUrl = (path: string[]): string =>
   path.length > 0 ? `${Route.albums()}?${new URLSearchParams({ path: path.join('/') })}` : Route.albums();
+
+/** The albums page showing the folder an album is in, where its "back" goes. */
+export const getAlbumParentUrl = (albumName: string): string => getAlbumFolderUrl(getAlbumFolderPath(albumName));
 
 export type AlbumFolder = {
   name: string;
