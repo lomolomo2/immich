@@ -1,5 +1,6 @@
 <script lang="ts">
   import AlbumCardGroup from '$lib/components/album-page/album-card-group.svelte';
+  import AlbumFolderCard from '$lib/components/album-page/album-folder-card.svelte';
   import AlbumsTable from '$lib/components/album-page/albums-table.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/menu-option.svelte';
@@ -17,6 +18,7 @@
     type AlbumViewSettings,
   } from '$lib/stores/preferences.store';
   import { user } from '$lib/stores/user.store';
+  import { getAlbumFolderLevel } from '$lib/utils/album-folders';
   import { getSelectedAlbumGroupOption, sortAlbums, stringToSortOrder, type AlbumGroup } from '$lib/utils/album-utils';
   import type { ContextMenuPosition } from '$lib/utils/context-menu';
   import { normalizeSearchString } from '$lib/utils/string-utils';
@@ -35,6 +37,8 @@
     allowEdit?: boolean;
     showOwner?: boolean;
     albumGroupIds?: string[];
+    /** The album folder shown (album names nest by "/"); [] = the top level. */
+    folderPath?: string[];
     empty?: Snippet;
   }
 
@@ -47,6 +51,7 @@
     showOwner = false,
     // eslint-disable-next-line no-useless-assignment
     albumGroupIds = $bindable([]),
+    folderPath = [],
     empty,
   }: Props = $props();
 
@@ -146,10 +151,16 @@
       : albums,
   );
 
+  // A search lists every matching album; otherwise show only the sub-folders and albums in
+  // the current folder.
+  let folderLevel = $derived(
+    normalizedSearchQuery ? { folders: [], albums: filteredAlbums } : getAlbumFolderLevel(filteredAlbums, folderPath),
+  );
+
   let albumGroupOption = $derived(getSelectedAlbumGroupOption(userSettings));
   let groupedAlbums = $derived.by(() => {
     const groupFunc = groupOptions[albumGroupOption] ?? groupOptions[AlbumGroupBy.None];
-    const groupedAlbums = groupFunc(stringToSortOrder(userSettings.groupOrder), filteredAlbums);
+    const groupedAlbums = groupFunc(stringToSortOrder(userSettings.groupOrder), folderLevel.albums);
 
     return groupedAlbums.map((group) => ({
       id: group.id,
@@ -252,7 +263,18 @@
 <OnEvents {onAlbumUpdate} {onAlbumDelete} {onSharedLinkCreate} />
 
 {#if albums.length > 0}
-  {#if userSettings.view === AlbumViewMode.Cover}
+  {#if folderLevel.folders.length > 0}
+    <!-- Album folders -->
+    <div class="mt-4 grid grid-auto-fill-56 gap-y-4" data-testid="album-folders">
+      {#each folderLevel.folders as folder (folder.name)}
+        <AlbumFolderCard {folder} />
+      {/each}
+    </div>
+  {/if}
+
+  {#if folderLevel.albums.length === 0}
+    <!-- A folder holding only sub-folders -->
+  {:else if userSettings.view === AlbumViewMode.Cover}
     <!-- Album Cards -->
     {#if albumGroupOption === AlbumGroupBy.None}
       <AlbumCardGroup

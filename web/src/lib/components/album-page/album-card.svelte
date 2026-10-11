@@ -1,5 +1,6 @@
 <script lang="ts">
   import AlbumCover from '$lib/components/album-page/album-cover.svelte';
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import { user } from '$lib/stores/user.store';
   import { getContextMenuPositionFromEvent, type ContextMenuPosition } from '$lib/utils/context-menu';
   import { getShortDateRange } from '$lib/utils/date-time';
@@ -64,7 +65,7 @@
       data-testid="album-name"
       title={album.albumName}
     >
-      {album.albumName}
+      {getAlbumDisplayName(album.albumName)}
     </p>
 
     {#if showDateRange && album.startDate && album.endDate}

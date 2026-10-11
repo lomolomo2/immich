@@ -4,6 +4,7 @@
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { user } from '$lib/stores/user.store';
+  import { getAlbumDisplayName } from '$lib/utils/album-folders';
   import type { ContextMenuPosition } from '$lib/utils/context-menu';
   import type { AlbumResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
@@ -36,8 +37,11 @@
   onclick={() => goto(Route.viewAlbum(album))}
   {oncontextmenu}
 >
-  <td class="text-md text-ellipsis text-start w-8/12 sm:w-4/12 md:w-4/12 xl:w-[30%] 2xl:w-[40%] items-center">
-    {album.albumName}
+  <td
+    class="text-md text-ellipsis text-start w-8/12 sm:w-4/12 md:w-4/12 xl:w-[30%] 2xl:w-[40%] items-center"
+    title={album.albumName}
+  >
+    {getAlbumDisplayName(album.albumName)}
     {#if album.shared}
       <Icon
         icon={mdiShareVariantOutline}
