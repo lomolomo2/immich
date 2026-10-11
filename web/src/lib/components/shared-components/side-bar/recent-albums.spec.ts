@@ -5,12 +5,13 @@ import { render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 
 describe('RecentAlbums component', () => {
-  it('sorts albums by most recently updated', async () => {
+  it('lists only the top level: folders open the albums page, albums their timeline', async () => {
     const albums = [
-      albumFactory.build({ updatedAt: '2024-01-01T00:00:00Z' }),
-      albumFactory.build({ updatedAt: '2024-01-09T00:00:01Z' }),
-      albumFactory.build({ updatedAt: '2024-01-10T00:00:00Z' }),
-      albumFactory.build({ updatedAt: '2024-01-09T00:00:00Z' }),
+      albumFactory.build({ albumName: 'wedding' }),
+      albumFactory.build({ albumName: '/Hedy/piano' }),
+      albumFactory.build({ albumName: '/Hedy/outdoor' }),
+      albumFactory.build({ albumName: '/351-1/相册' }),
+      albumFactory.build({ albumName: '/Faces/Hedy' }),
     ];
 
     sdkMock.getAllAlbums.mockResolvedValueOnce([...albums]);
@@ -18,14 +19,13 @@ describe('RecentAlbums component', () => {
 
     expect(sdkMock.getAllAlbums).toBeCalledTimes(1);
 
-    // wtf
     await tick();
     await tick();
 
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(3);
-    expect(links[0]).toHaveAttribute('href', `/albums/${albums[2].id}`);
-    expect(links[1]).toHaveAttribute('href', `/albums/${albums[1].id}`);
-    expect(links[2]).toHaveAttribute('href', `/albums/${albums[3].id}`);
+    expect(links.map((link) => link.textContent?.trim())).toEqual(['351-1', 'Hedy', 'wedding']);
+    expect(links[0]).toHaveAttribute('href', '/albums?path=351-1');
+    expect(links[1]).toHaveAttribute('href', '/albums?path=Hedy');
+    expect(links[2]).toHaveAttribute('href', `/albums/${albums[0].id}`);
   });
 });

@@ -78,3 +78,16 @@ export const getAlbumFolderLevel = (albums: AlbumResponseDto[], folderPath: stri
 
   return { folders, albums: levelAlbums };
 };
+
+export type AlbumFolderEntry =
+  | { type: 'folder'; name: string; folder: AlbumFolder }
+  | { type: 'album'; name: string; album: AlbumResponseDto };
+
+/** The sub-folders and albums directly inside `folderPath`, in one list sorted by name. */
+export const getAlbumFolderEntries = (albums: AlbumResponseDto[], folderPath: string[]): AlbumFolderEntry[] => {
+  const level = getAlbumFolderLevel(albums, folderPath);
+  return [
+    ...level.folders.map((folder) => ({ type: 'folder' as const, name: folder.name, folder })),
+    ...level.albums.map((album) => ({ type: 'album' as const, name: getAlbumDisplayName(album.albumName), album })),
+  ].sort((a, b) => a.name.localeCompare(b.name));
+};

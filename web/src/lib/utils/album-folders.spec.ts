@@ -1,5 +1,6 @@
 import {
   getAlbumDisplayName,
+  getAlbumFolderEntries,
   getAlbumFolderLevel,
   getAlbumNamePath,
   parseAlbumFolderPath,
@@ -77,5 +78,22 @@ describe('getAlbumFolderLevel', () => {
 
     expect(level.folders).toEqual([{ name: 'Trips', path: ['Trips'], itemCount: 1 }]);
     expect(level.albums.map(({ albumName }) => albumName)).toEqual(['Trips']);
+  });
+});
+
+describe('getAlbumFolderEntries', () => {
+  it('lists a level’s folders and albums together, by name', () => {
+    const albums = [album('wedding'), album('/Hedy/piano'), album('/Hedy/outdoor'), album('/351-1/相册'), album('Art')];
+
+    expect(getAlbumFolderEntries(albums, []).map(({ type, name }) => `${type}:${name}`)).toEqual([
+      'folder:351-1',
+      'album:Art',
+      'folder:Hedy',
+      'album:wedding',
+    ]);
+    expect(getAlbumFolderEntries(albums, ['Hedy']).map(({ type, name }) => `${type}:${name}`)).toEqual([
+      'album:outdoor',
+      'album:piano',
+    ]);
   });
 });
