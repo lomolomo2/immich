@@ -118,7 +118,7 @@
         isIntersecting(monthGroup.top, monthGroup.top + monthGroup.height, visibleTop, visibleBottom),
     );
   });
-  const showTimelineLoadingSpinner = $derived(timelineManager.initTask.loading || hasVisibleUnloadedMonth);
+  const showTimelineLoadingSpinner = $derived(timelineManager.isInitializing || hasVisibleUnloadedMonth);
   const maxMd = $derived(mediaQueryManager.maxMd);
   const usingMobileDevice = $derived(mediaQueryManager.pointerCoarse);
 

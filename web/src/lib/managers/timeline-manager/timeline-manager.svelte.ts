@@ -66,6 +66,12 @@ export class TimelineManager extends VirtualScrollManager {
   });
 
   isInitialized = $state(false);
+  // initTask.loading isn't reactive (CancellableTask is plain TS), so the loading spinner
+  // couldn't follow it: track the time buckets being fetched here instead.
+  #pendingInits = $state(0);
+  get isInitializing() {
+    return this.#pendingInits > 0;
+  }
   isScrollingOnLoad = false;
   months: MonthGroup[] = $state([]);
   albumAssets: Set<string> = new SvelteSet();
@@ -260,12 +266,14 @@ export class TimelineManager extends VirtualScrollManager {
     }
 
     this.suspendTransitions = true;
+    this.#pendingInits++;
     try {
       await this.initTask.reset();
       await this.#init(options);
       this.updateViewportGeometry(false);
       this.#createScrubberMonths();
     } finally {
+      this.#pendingInits--;
       this.suspendTransitions = false;
     }
   }
@@ -274,10 +282,15 @@ export class TimelineManager extends VirtualScrollManager {
     this.isInitialized = false;
     this.months = [];
     this.albumAssets.clear();
-    await this.initTask.execute(async () => {
-      this.#options = options;
-      await this.#initializeMonthGroups();
-    }, true);
+    this.#pendingInits++;
+    try {
+      await this.initTask.execute(async () => {
+        this.#options = options;
+        await this.#initializeMonthGroups();
+      }, true);
+    } finally {
+      this.#pendingInits--;
+    }
   }
 
   public override destroy() {

@@ -94,6 +94,23 @@ describe('TimelineManager', () => {
     });
   });
 
+  describe('isInitializing', () => {
+    it('is true while the time buckets load, e.g. while an album opens', async () => {
+      let resolveBuckets: (buckets: { count: number; timeBucket: string }[]) => void = () => {};
+      sdkMock.getTimeBuckets.mockReturnValue(new Promise((resolve) => (resolveBuckets = resolve)));
+      const timelineManager = new TimelineManager();
+      expect(timelineManager.isInitializing).toBe(false);
+
+      const updating = timelineManager.updateOptions({ albumId: 'album-1' });
+      expect(timelineManager.isInitializing).toBe(true);
+
+      resolveBuckets([]);
+      await updating;
+      expect(timelineManager.isInitializing).toBe(false);
+      expect(timelineManager.isInitialized).toBe(true);
+    });
+  });
+
   describe('loadMonthGroup', () => {
     let timelineManager: TimelineManager;
     const bucketAssets: Record<string, TimelineAsset[]> = {
